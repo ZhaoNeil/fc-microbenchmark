@@ -1,5 +1,0 @@
-#!/sbin/openrc-run
-
-command="/bin/stream"
-command_background="yes"
-pidfile="/tmp/stream.pid"

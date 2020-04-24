@@ -1,14 +1,14 @@
 CC = gcc
-CFLAGS = -O2
+CFLAGS = -O2 -static
 
-all: bin/stream bin/primenumber bin/dd-workload.sh
+all: bin/stream bin/primenumber bin/dd-workload bin/run-workload-reboot
 
 .PHONY: bin clean
 
 bin:
 	mkdir bin
 
-bin/%.sh: src/%.sh bin
+bin/%: src/% bin
 	cp $< $@
 
 bin/%: src/%.c bin

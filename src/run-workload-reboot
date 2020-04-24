@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# Fetch kernel args and cut off everything except first argument
+# Which must be warg=VAL
+wArg="$(/bin/cat /proc/cmdline)"
+wArg=${wArg%% *}
+
+if [[ "${wArg%%=*}" != "warg" ]]; then
+    echo "First boot parameter is ${wArg%%=*}, but expected warg!"
+    /sbin/reboot
+fi
+
+wArg="${wArg##*=}"
+
+#The workloadName is determined by the runlevel
+workLoadName="$(/bin/rc-status -r)"
+
+$workLoadName $wArg
+
+/sbin/reboot

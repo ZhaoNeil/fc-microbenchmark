@@ -1,5 +1,0 @@
-#!/sbin/openrc-run
-
-command="/bin/dd-workload.sh"
-command_background="yes"
-pidfile="/tmp/dd-workload.pid"

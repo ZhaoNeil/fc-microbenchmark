@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "Running dd with arg $1"
+
+reboot

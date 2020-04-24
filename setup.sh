@@ -31,7 +31,9 @@ if [[ ! -e "$resourceDir/$fsName" ]]; then
     ./scripts/create-root-fs.sh "$fsName"
 
     echo "Compiling binaries..."
-    make
+    make > /dev/null
+
+    echo "Mounting rootfs..."
 
     mkdir mount
     sudo mount -t ext4 "$fsName" mount
@@ -47,24 +49,25 @@ if [[ ! -e "$resourceDir/$fsName" ]]; then
     # TODO: perhaps use the array with workload names, rather than writing them out
 
     echo "Setting up runlevels for workloads..."
-    sudo mkdir ./mount/etc/runlevels/{stream,dd,primenumber}
-    sudo chmod +x ./mount/etc/runlevels/{stream,dd,primenumber}
+    sudo mkdir ./mount/etc/runlevels/{stream,dd-workload,primenumber}
+    sudo chmod +x ./mount/etc/runlevels/{stream,dd-workload,primenumber}
 
     echo "Installing workloads to runlevels..."
     sudo cp ./openrc/init.d/* ./mount/etc/init.d
     sudo cp ./openrc/conf.d/* ./mount/etc/conf.d
 
 
-
+# Add workloads to appropriate runlevels
+# Also add agetty to default runlevel
 cat <<EOF | sudo chroot ./mount /bin/sh
-/sbin/rc-update add run-workload-dd dd
-/sbin/rc-update add run-workload-primenumber primenumber
-/sbin/rc-update add run-workload-stream stream
-/sbin/rc-update add shutdown-after-dd dd
-/sbin/rc-update add shutdown-after-stream stream
-/sbin/rc-update add shutdown-after-primenumber primenumber
+/sbin/rc-update add run-workload dd-workload
+/sbin/rc-update add run-workload primenumber
+/sbin/rc-update add run-workload stream
 /sbin/rc-update add devfs sysinit
 /sbin/rc-update add sysfs sysinit
+
+/bin/ln -s /etc/init.d/agetty /etc/init.d/agetty.ttyS0
+/sbin/rc-update add agetty.ttyS0 default
 
 EOF
 

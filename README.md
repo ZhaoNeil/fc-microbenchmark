@@ -19,6 +19,7 @@ In order to benchmark the microVM-architecture, different workloads have to be g
 ## Getting Started
 
 Firstly, the root filesystem (rootfs) must be generated. This is an installation of the [Alpine Linux mini root filesystem](https://alpinelinux.org/downloads/).
+
 Secondly, a Linux kernel must be selected. This repo does supply a Linux kernel, but in case a customized kernel is desired, the instructions for building a kernel suited for Firecracker can be found [here](https://github.com/firecracker-microvm/firecracker/blob/master/docs/rootfs-and-kernel-setup.md).
 
 When all of the above is done, then the benchmark can be started using:

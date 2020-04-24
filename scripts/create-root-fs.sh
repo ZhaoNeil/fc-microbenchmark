@@ -51,7 +51,7 @@ sudo touch "$tmpDir/fs/etc/apk/repositories"
 echo "$alpineMirror/$alpineBranch/main" | sudo tee "$tmpDir/fs/etc/apk/repositories" > /dev/null
 echo "$alpineMirror/$alpineBranch/community" | sudo tee -a "$tmpDir/fs/etc/apk/repositories" > /dev/null
 
-sudo $tmpDir/apk --root "$tmpDir/fs" --update-cache --initdb --allow-untrusted --arch x86_64 add alpine-base openrc
+sudo $tmpDir/apk --root "$tmpDir/fs" --update-cache --initdb --allow-untrusted --arch x86_64 add alpine-base util-linux openrc
 
 # Remove the spawning getty's
 cat <<EOF > ./inittab
