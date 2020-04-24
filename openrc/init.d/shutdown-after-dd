@@ -1,0 +1,14 @@
+#!/sbin/openrc
+
+depend() {
+    after run-workload-dd
+}
+
+start() {
+    eebegin "Workload finished, shutting down..."
+    reboot
+}
+
+stop() {
+
+}

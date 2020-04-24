@@ -1,0 +1,6 @@
+#!/sbin/openrc-run
+
+command="/bin/primenumber"
+command_args="10000000"
+command_background="yes"
+pidfile="/tmp/primenumber.pid"

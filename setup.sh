@@ -6,6 +6,11 @@ kernelName="vmlinux"
 tmpDir="/tmp/fc-microbenchmark"
 resourceDir="./resources"
 
+declare -a workloads=("dd" "primenumber" "stream")
+workloadScriptPrefix="run-workload-"
+workloadShutdownPrefix="shutdown-after-"
+
+
 echo "Checking if AWS Firecracker is in \$PATH..."
 
 which firecracker > /dev/null
@@ -29,19 +34,44 @@ if [[ ! -e "$resourceDir/$fsName" ]]; then
     make
 
     mkdir mount
+    sudo mount -t ext4 "$fsName" mount
 
     if [[ $EUID -ne 0 ]]; then
         echo "You are not root, may ask for root permission to mount..."
     fi
 
     echo "Copying binaries to filesystem..."
-    sudo mount -t ext4 "$fsName" mount
 
     sudo cp ./bin/* ./mount/bin
 
+    # TODO: perhaps use the array with workload names, rather than writing them out
+
+    echo "Setting up runlevels for workloads..."
+    sudo mkdir ./mount/etc/runlevels/{stream,dd,primenumber}
+    sudo chmod +x ./mount/etc/runlevels/{stream,dd,primenumber}
+
+    echo "Installing workloads to runlevels..."
+    sudo cp ./openrc/init.d/* ./mount/etc/init.d
+    sudo cp ./openrc/conf.d/* ./mount/etc/conf.d
+
+
+
+cat <<EOF | sudo chroot ./mount /bin/sh
+/sbin/rc-update add run-workload-dd dd
+/sbin/rc-update add run-workload-primenumber primenumber
+/sbin/rc-update add run-workload-stream stream
+/sbin/rc-update add shutdown-after-dd dd
+/sbin/rc-update add shutdown-after-stream stream
+/sbin/rc-update add shutdown-after-primenumber primenumber
+/sbin/rc-update add devfs sysinit
+/sbin/rc-update add sysfs sysinit
+
+EOF
+
+    echo "Unmounting..."
     sudo umount mount
 
-    make clean 
+    make clean > /dev/null
 
     rmdir mount
 

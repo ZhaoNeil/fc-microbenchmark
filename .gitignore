@@ -1,3 +1,4 @@
 mount
 mountdir
 fs
+*.ext4

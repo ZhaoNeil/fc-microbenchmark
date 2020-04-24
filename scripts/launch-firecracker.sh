@@ -3,6 +3,7 @@
 kernelLocation="${1:?"Need first argument, kernel location"}"
 fsLocation="${2:?"Need second argument, filesystem location"}"
 fcID=${3:-1}
+workLoad=${4:-"default"}
 cpuCount=1
 memSize=128
 fcSock="/tmp/firecracker-$fcID.socket"
@@ -43,7 +44,7 @@ curl_put() {
 issue_commands() {
     local KERNEL_ARGS
 
-    KERNEL_ARGS="reboot=k panic=1 pci=off nomodules"
+    KERNEL_ARGS="reboot=k panic=1 pci=off softlevel=$workLoad"
 
     if [[ $asDeamon -eq 1 ]]; then
         KERNEL_ARGS="console=ttyS0 ' $KERNEL_ARGS"
@@ -69,7 +70,7 @@ curl_put '/drives/1' <<EOF
   "drive_id": "1",
   "path_on_host": "$fsLocation",
   "is_root_device": true,
-  "is_read_only": true
+  "is_read_only": false
 }
 EOF
 
@@ -84,9 +85,9 @@ EOF
 }
 
 
-if [[ "$4" == "d" ]]; then
+if [[ "$5" == "d" ]]; then
     asDeamon=1
-elif [[ "$4" == "c" ]]; then
+elif [[ "$5" == "c" ]]; then
     asDeamon=1
     echo "Issueing commands only"
     issue_commands
