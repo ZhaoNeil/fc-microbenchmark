@@ -41,6 +41,7 @@
 /*  5. Absolutely no warranty is expressed or implied.                   */
 /*-----------------------------------------------------------------------*/
 # include <stdio.h>
+# include <stdlib.h> //For atoi
 # include <unistd.h>
 # include <math.h>
 # include <float.h>
@@ -103,14 +104,16 @@
  *      NTIMES can also be set on the compile line without changing the source
  *         code using, for example, "-DNTIMES=7".
  */
-#ifdef NTIMES
-#if NTIMES<=1
-#   define NTIMES	10
-#endif
-#endif
-#ifndef NTIMES
-#   define NTIMES	10
-#endif
+// #ifdef NTIMES
+// #if NTIMES<=1
+// #   define NTIMES	10
+// #endif
+// #endif
+// #ifndef NTIMES
+// #   define NTIMES	10
+// #endif
+
+static int NTIMES;
 
 /*  Users are allowed to modify the "OFFSET" variable, which *may* change the
  *         relative alignment of the arrays (though compilers may change the 
@@ -205,8 +208,18 @@ extern void tuned_STREAM_Triad(STREAM_TYPE scalar);
 extern int omp_get_num_threads();
 #endif
 int
-main()
+main(int argc, char **argv)
     {
+	if(argc > 1)
+		NTIMES = atoi(argv[1]);
+	else
+		NTIMES = 2;
+
+	if(NTIMES < 2)
+		NTIMES = 2;
+	
+
+
     int			quantum, checktick();
     int			BytesPerWord;
     int			k;

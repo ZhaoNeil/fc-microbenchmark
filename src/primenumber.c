@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h> //for atoi
 
 int check_prime(int n)
 {
@@ -11,9 +12,13 @@ int check_prime(int n)
 
 int main(int argc, char **argv)
 {
-    int i, p;
+    int i, p, n;
     p = 0;
-    int n = atoi(argv[1]);
+    if(argc > 1)
+        n = atoi(argv[1]);
+    else
+        return 1;
+    
     for (i = 100; i < n; ++ i)
          p += check_prime(i);
 
