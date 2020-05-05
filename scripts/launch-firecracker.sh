@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#Get the location of this script
+myLocation=${0%${0##*/}}
+
 kernelLocation="${1:?"Need first argument, kernel location"}"
 fsLocation="${2:?"Need second argument, filesystem location"}"
 fcID=${3:-1}
@@ -8,23 +11,43 @@ workLoadArg=${5:-"0"}
 cpuCount=1
 memSize=128
 fcSock="/tmp/firecracker-$fcID.socket"
+fcOutput="/tmp/firecracker-$fcID.output"
+
+#Import issue_commands
+source $myLocation/commands.sh
 
 #For debugging purposes
 asDeamon=0
 verbose=0
+timeOutput=0
 
 if [[ "$6" == "d" ]]; then
+    #Run as daemon
     asDeamon=1
     verbose=0
 elif [[ "$6" == "dv" ]]; then
+    #Run as daemon put print to terminal
     asDeamon=1
     verbose=1
 elif [[ "$6" == "c" ]]; then
+    #Only issue commands (i.e. when other terminal waits for commands)
+    #In this case, fcIDs of both terminals must match
     asDeamon=0
     verbose=1
     echo "Issueing commands only"
-    issue_commands $asDeamon
+    issue_commands
     exit 0
+elif [[ "$6" == "v" ]]; then
+    #Do not daemonize and print to terminal
+    #Used when parallelizing executions but VM outputs are needed
+    asDeamon=0
+    verbose=1
+elif [[ "$6" == "t" ]]; then
+    #Measure execution time of the microVM and return this value in ms
+    #Print the execution time of the workload in the microVM to stdout
+    asDeamon=0
+    verbose=1
+    timeOutput=1
 fi
 
 #Check firecracker installation
@@ -36,84 +59,35 @@ if [[ $? -eq 1 ]]; then
 fi
 
 
-
-#Shamelessly copied curl_put from https://github.com/firecracker-microvm/firecracker-demo/
-CURL=(curl --silent --show-error --header "Content-Type: application/json" --unix-socket "$fcSock" --write-out "HTTP %{http_code}")
-
-curl_put() {
-    local URL_PATH="$1"
-    local OUTPUT RC
-    OUTPUT="$("${CURL[@]}" -X PUT --data @- "http://localhost/${URL_PATH#/}" 2>&1)"
-    RC="$?"
-    if [ "$RC" -ne 0 ]; then
-        echo "Error: curl PUT ${URL_PATH} failed with exit code $RC, output:"
-        echo "$OUTPUT"
-        return 1
-    fi
-    # Error if output doesn't end with "HTTP 2xx"
-    if [[ "$OUTPUT" != *HTTP\ 2[0-9][0-9] ]]; then
-        echo "Error: curl PUT ${URL_PATH} failed with non-2xx HTTP status code, output:"
-        echo "$OUTPUT"
-        return 1
-    fi
-}
-
-issue_commands() {
-    local KERNEL_ARGS
-
-    KERNEL_WARG="warg=$workLoadArg softlevel=$workLoad"
-
-    KERNEL_STD_ARGS="reboot=k panic=1 pci=off"
-
-    if [[ $verbose -eq 1 ]]; then
-        KERNEL_ARGS="console=ttyS0 $KERNEL_STD_ARGS"
-    fi
-
-    #Hackish solution to get warg in front all the time
-    KERNEL_ARGS="$KERNEL_WARG $KERNEL_ARGS"
-
-curl_put '/boot-source' <<EOF
-{
-  "kernel_image_path": "$kernelLocation",
-  "boot_args": "$KERNEL_ARGS"
-}
-EOF
-
-curl_put '/machine-config' <<EOF
-{
- "vcpu_count": $cpuCount,
- "mem_size_mib": $memSize,
- "ht_enabled": false
-}
-EOF
-
-curl_put '/drives/1' <<EOF
-{
-  "drive_id": "1",
-  "path_on_host": "$fsLocation",
-  "is_root_device": true,
-  "is_read_only": false
-}
-EOF
-
-
-curl_put '/actions' <<EOF
-{
-  "action_type": "InstanceStart"
-}
-EOF
-
-    return 0;
-}
-
 rm -rf "$fcSock"
 
-echo "Launching Firecracker..."
+if [[ $timeOutput -ne 1 ]]; then
+    echo "Launching Firecracker..."
+fi
 
 if [[ $asDeamon -eq 0 ]]; then
-    firecracker --api-sock "$fcSock"
+    (
+        # wait for the apisock to come up
+        while [[ ! -e "$fcSock" ]]; do
+            sleep 0.1s
+        done
+        issue_commands $verbose
+    )&
+    #Launch the firecracker instance and time its runtime
+    if [[ $timeOutput -eq 1 ]]; then
+        declare -a fctime=( $( { time -p firecracker --api-sock "$fcSock"; } 2>&1 > $fcOutput  ) )
+        fctime=${fctime[1]//./}
+        echo "fc: $fctime"
+
+        vmtime="$(cat $fcOutput | grep WORKLOADRUNTIME)"
+        vmtime=${vmtime##* }
+        echo "mVM: $vmtime"
+        rm -rf $fcOutput
+    else
+        firecracker --api-sock "$fcSock"
+    fi
 elif [[ $asDeamon -ne 0 ]]; then
     firecracker --api-sock "$fcSock" &
 
-    issue_commands $1
+    issue_commands $verbose
 fi

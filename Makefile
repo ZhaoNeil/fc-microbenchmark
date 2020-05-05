@@ -6,7 +6,7 @@ all: bin/stream bin/primenumber bin/dd-workload bin/run-workload-reboot
 .PHONY: bin clean
 
 bin:
-	@- mkdir bin > /dev/null
+	@- mkdir bin
 bin/%: src/% bin
 	cp $< $@
 

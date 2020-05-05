@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Fetch kernel args and cut off everything except first argument
 # Which must be warg=VAL
@@ -10,11 +10,16 @@ if [[ "${wArg%%=*}" != "warg" ]]; then
     /sbin/reboot
 fi
 
+#Get the actual value VAL of "warg=VAL"
 wArg="${wArg##*=}"
 
 #The workloadName is determined by the runlevel
 workLoadName="$(/bin/rc-status -r)"
 
-$workLoadName $wArg
+#Print execution time of this workload, dump the regular output
+declare -a etime=( $( { time -p $workLoadName $wArg; }  2>&1 > /dev/null )) 
+#Print the runtime as ms (without the dot, e.g. 0.15 to 015)
+echo "WORKLOADRUNTIME ${etime[1]//./}"
 
+#Reboot (kill the VM)
 /sbin/reboot

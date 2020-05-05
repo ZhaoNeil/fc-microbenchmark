@@ -6,10 +6,10 @@ kernelName="vmlinux"
 tmpDir="/tmp/fc-microbenchmark"
 resourceDir="./resources"
 
-declare -a workloads=("dd" "primenumber" "stream")
-workloadScriptPrefix="run-workload-"
-workloadShutdownPrefix="shutdown-after-"
+workloadsFile="${1:-"workloads.txt"}"
 
+#Read installed workloads from file to array
+workloads=($(cat $workloadsFile))
 
 echo "Checking if AWS Firecracker is in \$PATH..."
 
