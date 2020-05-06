@@ -91,8 +91,12 @@
  *          will override the default size of 10M with a new size of 100M elements
  *          per array.
  */
+
+// STREAM_ARRAY_SIZE must be tweaked, as the default value results in a memory
+// consumption of 228.9MiB, whereas the microVM has only 128MiB available
+// This value results in a memory usage of 91.6MiB
 #ifndef STREAM_ARRAY_SIZE
-#   define STREAM_ARRAY_SIZE	10000000
+#   define STREAM_ARRAY_SIZE	4000000
 #endif
 
 /*  2) STREAM runs each kernel "NTIMES" times and reports the *best* result

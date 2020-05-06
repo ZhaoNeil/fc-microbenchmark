@@ -26,7 +26,7 @@ echo "Downloading apk tools..."
 curl -fsSL -o "$tmpFile" "$alpineURL"
 
 echo "Creating filesystem..."
-dd if=/dev/zero of="$fsName" bs=1M count=150
+dd if=/dev/zero of="$fsName" bs=1M count=30
 mkfs.ext4 "$fsName"
 
 if [[ $EUID -ne 0 ]]; then

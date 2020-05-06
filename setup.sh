@@ -1,6 +1,6 @@
 #!/bin/bash
 
-fsName="benchmark.ext4"
+fsName="rootfs.ext4"
 kernelName="vmlinux"
 
 tmpDir="/tmp/fc-microbenchmark"
@@ -46,23 +46,23 @@ if [[ ! -e "$resourceDir/$fsName" ]]; then
 
     sudo cp ./bin/* ./mount/bin
 
-    # TODO: perhaps use the array with workload names, rather than writing them out
 
-    echo "Setting up runlevels for workloads..."
-    sudo mkdir ./mount/etc/runlevels/{stream,dd-workload,primenumber}
-    sudo chmod +x ./mount/etc/runlevels/{stream,dd-workload,primenumber}
 
-    echo "Installing workloads to runlevels..."
+    echo "Installing openrc files..."
     sudo cp ./openrc/init.d/* ./mount/etc/init.d
     sudo cp ./openrc/conf.d/* ./mount/etc/conf.d
 
-
-# Add workloads to appropriate runlevels
-# Also add agetty to default runlevel
+    echo "Setting up runlevels for workloads..."
+    for workload in ${workloads[@]}; do
+        sudo mkdir ./mount/etc/runlevels/$workload
+        sudo chmod +x ./mount/etc/runlevels/$workload
 cat <<EOF | sudo chroot ./mount /bin/sh
-/sbin/rc-update add run-workload dd-workload
-/sbin/rc-update add run-workload primenumber
-/sbin/rc-update add run-workload stream
+/sbin/rc-update add run-workload $workload
+EOF
+    done
+
+# Add agetty to default runlevel and make sure some fs's are available on boot
+cat <<EOF | sudo chroot ./mount /bin/sh
 /sbin/rc-update add devfs sysinit
 /sbin/rc-update add sysfs sysinit
 

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O2 -static
+CFLAGS = -static
 
 all: bin/stream bin/primenumber bin/dd-workload bin/run-workload-reboot
 
@@ -11,7 +11,10 @@ bin/%: src/% bin
 	cp $< $@
 
 bin/%: src/%.c bin
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) -O2 $< -o $@
+
+bin/stream: src/stream.c bin
+	$(CC) $(CFLAGS) -O $< -o $@
 
 clean:
 	rm -rf bin
