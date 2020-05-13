@@ -1,5 +1,10 @@
 #!/bin/bash
 
+### Starting point for the fc-microbenchmark. This script provides a nicer user
+### experience than when all backing scripts are used manually.
+###
+### Author:     N.J.L. Boonstra
+###     2020 (c)
 
 #Modes accepted by this script
 declare -a modes=( "benchmark" "baseline" )
@@ -9,9 +14,15 @@ wlLoc="./workloads.txt"
 mode=${modes[0]}
 #Number of instances to be run maximally
 num=1000
+#This mix of workloads, default value means that when num=1000, and there are
+#three workloads, then each workload will get 333 instances. (This means that
+#the remainder of this division gets lost).
+#However, if there are only two workloads, the third part is not evaluated, thus
+#both workloads will receive equal instances, e.g. 500/500 (when num=1000)
+mix="3/3/3"
 
 usage() {
-    echo "Usage: ${0##*/} [-k <string>] [-f <string>] [-m <string>] [-w <string>] [-n <int>] [-h]" 1>&2
+    echo "Usage: ${0##*/} [-k <string>] [-f <string>] [-m <string>] [-w <string>] [-n <int>] [-x <string>] [-h]" 1>&2
 }
 
 help() {
@@ -20,8 +31,9 @@ help() {
     echo "  -k  File location       Location of the kernel to be used, default: $kernelLoc" 1>&2
     echo "  -f  File location       Location of the root filesystem, default: $fsLoc" 1>&2
     echo "  -m  Mode                Mode to run, can be ${modes[@]}, default: $mode" 1>&2
-    echo "  -w  File location      Location of the workloads.txt file, default: $wlLoc"
+    echo "  -w  File location       Location of the workloads.txt file, default: $wlLoc"
     echo "  -n  Instances           Number of instances to run maximally, default: $num" 1>&2
+    echo "  -x  Mix                 The mix of workloads, in format ii/ii/ii, default: $mix" 1>&2
     echo "  -h                      Display this" 1>&2
     exit 1
 }
@@ -96,7 +108,8 @@ fi
 
 if [[ $mode -eq 0 ]]; then
     #benchmark
-    echo bench
+    echo "Running benchmark..."
+    ./scripts/benchmark.sh $kernelLoc $fsLoc $wlLoc $num $mix
 elif [[ $mode -eq 1 ]]; then
     #baseline
     echo "Determining baseline execution times..."

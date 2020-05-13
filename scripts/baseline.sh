@@ -1,15 +1,22 @@
 #!/bin/bash
 
-# This script determines a baseline for the execution times of both the workload
-# and the microVM as a whole. For this, an x amount of instances will be fired 
-# up sequentially and of each instance both executions times will be recorded.
+### This script determines a baseline for the execution times of both the 
+### workload and the microVM as a whole. For this, an x amount of instances will
+### be fired up sequentially and of each instance both executions times will be 
+### recorded.
+###
+### Author:     N.J.L. Boonstra
+###     2020 (c)
+
 myLoc=${0%${0##*/}}
+#start.sh already passes defaults, but this is nice in case you want to use this
+#script standalone
 kernelLoc="${1:-"$myLoc/../resources/vmlinux"}"
-fsLoc="${2:-"$myLoc/../resources/benchmark.ext4"}"
+fsLoc="${2:-"$myLoc/../resources/rootfs.ext4"}"
 workloadsFile="${3:-"workloads.txt"}"
 #Number of times each workload must be run
 num=${4:-1000}
-wargs=${5:-""}
+wargs=${5:-"$myLoc/../baseline-arguments.txt"}
 
 if [[ "$wargs" == "" ]]; then
     echo "Please specify workload arguments."
@@ -29,9 +36,15 @@ fi
 #Read the workloads
 workloads=($(cat $workloadsFile))
 
-OLDIFS=$IFS
-IFS=$','; declare -a workloadargs=( $wargs )
-IFS=$OLDIFS
+#Read the arguments for each workload from the warg file
+workloadargs=($(cat $wargs))
+
+for warg in ${workloadargs[@]} ; do
+
+
+# OLDIFS=$IFS
+# IFS=$','; declare -a workloadargs=( $wargs )
+# IFS=$OLDIFS
 
 if [[ ${#workloadargs[@]} -lt ${#workloads[@]} ]]; then
     echo "Please provide workload arguments for each workload."
@@ -58,7 +71,9 @@ for workload in ${workloads[@]}; do
 
     for (( i=0; i < num; ++i )); do
         declare -a times=( $( { $myLoc/launch-firecracker.sh $kernelLoc $fsLoc $i $workload $warg t; } )) 
-        #Fetch times and force base10
+        #Fetch times and force base10 by stripping the dotsign.
+        # TODO: now I assume that both times are equally precise, but this is 
+        # not necessarily the case
         fctime=${times[1]//[^0-9]/}
         fctime=$(( 10#$fctime ))
         vmtime=${times[3]//[^0-9]/}
