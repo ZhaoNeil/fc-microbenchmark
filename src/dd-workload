@@ -1,5 +1,7 @@
 #!/bin/sh
 
-echo "Running dd with arg $1"
+ofname="dd-workload-$RANDOM"
+
+dd if=/dev/urandom of=/mnt/$ofname bs=1M count=$1
 
 reboot

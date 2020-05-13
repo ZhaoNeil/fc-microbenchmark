@@ -4,14 +4,17 @@
 # and the microVM as a whole. For this, an x amount of instances will be fired 
 # up sequentially and of each instance both executions times will be recorded.
 myLoc=${0%${0##*/}}
-workloadsFile="${1:-"workloads.txt"}"
+kernelLoc="${1:-"$myLoc/../resources/vmlinux"}"
+fsLoc="${2:-"$myLoc/../resources/benchmark.ext4"}"
+workloadsFile="${3:-"workloads.txt"}"
 #Number of times each workload must be run
-num=${2:-1000}
-warg=${3:-10000}
+num=${4:-1000}
+wargs=${5:-""}
 
-#TODO: make this a bit more flexible
-kernelLoc="$myLoc/../resources/vmlinux"
-fsLoc="$myLoc/../resources/benchmark.ext4"
+if [[ "$wargs" == "" ]]; then
+    echo "Please specify workload arguments."
+    exit 1
+fi
 
 if [[ ! -e $workloadsFile ]]; then
     echo "The file $workloadsFile does not exist!"
@@ -26,6 +29,16 @@ fi
 #Read the workloads
 workloads=($(cat $workloadsFile))
 
+OLDIFS=$IFS
+IFS=$','; declare -a workloadargs=( $wargs )
+IFS=$OLDIFS
+
+if [[ ${#workloadargs[@]} -lt ${#workloads[@]} ]]; then
+    echo "Please provide workload arguments for each workload."
+    echo "Got ${#workloadargs[@]}, but expected ${#workloads[@]}"
+    exit 1
+fi
+
 #Set minimal amount of instances to 5 (more is usually better though)
 if [[ $num -lt 5 ]]; then
     echo "The minimal value of instances is 5, but got $1."
@@ -33,9 +46,12 @@ if [[ $num -lt 5 ]]; then
     num=5
 fi
 
+idx=0
 
 for workload in ${workloads[@]}; do
-    echo "Creating a baseline for $workload"
+    warg=${workloadargs[idx]}
+
+    echo "${workload},${warg}"
 
     tottime=0
     vmtottime=0
@@ -51,9 +67,11 @@ for workload in ${workloads[@]}; do
         vmtottime=$((vmtottime + vmtime))
         tottime=$((tottime + fctime))
 
-        echo "$i $fctime $vmtime"
+        echo "${i},${fctime},${vmtime}"
     done
 
-    echo "$workload $tottime $vmtottime"
+    echo "total,${tottime},${vmtottime}"
+    echo ""
+    ((++idx))
 done
 

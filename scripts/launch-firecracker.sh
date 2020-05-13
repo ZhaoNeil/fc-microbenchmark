@@ -91,3 +91,5 @@ elif [[ $asDeamon -ne 0 ]]; then
 
     issue_commands $verbose
 fi
+
+rm -rf "$fcSock"
