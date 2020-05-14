@@ -1,6 +1,7 @@
 #!/bin/bash
 
-fsName="rootfs.ext4"
+rootfsName="rootfs.ext4"
+writefsName="writedisk.ext4"
 kernelName="vmlinux"
 
 tmpDir="/tmp/fc-microbenchmark"
@@ -25,10 +26,10 @@ fi
 
 echo "Checking if root filesystem exists..."
 
-if [[ ! -e "$resourceDir/$fsName" ]]; then
+if [[ ! -e "$resourceDir/$rootfsName" ]]; then
     echo "Not found, building..."
     
-    ./scripts/create-root-fs.sh "$fsName"
+    ./scripts/create-root-fs.sh "$rootfsName"
 
     echo "Compiling binaries..."
     make > /dev/null
@@ -36,7 +37,7 @@ if [[ ! -e "$resourceDir/$fsName" ]]; then
     echo "Mounting rootfs..."
 
     mkdir mount
-    sudo mount -t ext4 "$fsName" mount
+    sudo mount -t ext4 "$rootfsName" mount
 
     if [[ $EUID -ne 0 ]]; then
         echo "You are not root, may ask for root permission to mount..."
@@ -68,6 +69,7 @@ cat <<EOF | sudo chroot ./mount /bin/sh
 
 /bin/ln -s /etc/init.d/agetty /etc/init.d/agetty.ttyS0
 /sbin/rc-update add agetty.ttyS0 default
+/sbin/rc-update add mount-writedisk sysinit
 
 EOF
 
@@ -78,9 +80,16 @@ EOF
 
     rmdir mount
 
-    mv "$fsName" "$resourceDir/"
+    mv "$rootfsName" "$resourceDir/"
 else
     echo "Found!"
+fi
+
+echo "Checking if write disk exists..."
+
+if [[ ! -e "$resourceDir/$writefsName" ]]; then
+    dd if=/dev/zero of="$resourceDir/$writefsName" bs=1G count=10
+    mkfs.ext4 "$resourceDir/$writefsName"
 fi
 
 echo "Checking if kernel exists..."

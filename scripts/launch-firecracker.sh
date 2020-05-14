@@ -5,6 +5,7 @@ myLocation=${0%${0##*/}}
 
 kernelLocation="${1:?"Need first argument, kernel location"}"
 fsLocation="${2:?"Need second argument, filesystem location"}"
+writefsLocation="${myLocation}/../resources/writedisk.ext4"
 fcID=${3:-1}
 workLoad=${4:-"default"}
 workLoadArg=${5:-"0"}

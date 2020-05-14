@@ -6,6 +6,8 @@ myLoc=${0%${0##*/}}
 kernelLoc="${1:-"$myLoc/../resources/vmlinux"}"
 fsLoc="${2:-"$myLoc/../resources/rootfs.ext4"}"
 workloadsFile="${3:-"workloads.txt"}"
+#num is the amount of instances that may be active at the same moment
+num=${4:-1000}
 wargs=${5:-"$myLoc/../benchmark-arguments.txt"}
 
 fileResults="$myLoc/results"
@@ -47,6 +49,8 @@ for workloadarg in ${workloadargs[@]}; do
         vmtime=$(( 10#$vmtime ))
         
         #Write results to the resultsfile
+        #TODO: check if this does not result in data loss due to concurrent 
+        #       writes
         echo "$myworknum,$fctime,$vmtime" >> $fileResults
 
     )&
@@ -56,11 +60,11 @@ done
 echo "Waiting for the instances to finish..." 1>&2
 wait 
 echo "Processing results..." 1>&2
-#We should get x results, with x being equal to the amount of lines in the
-#$wargs file
 
 IFS=$'\n'; results=( $(cat $fileResults) )
 
+#We should get x results, with x being equal to the amount of lines in the
+#$wargs file
 if [[ ${#results[@]} -ne ${#workloadargs[@]} ]]; then
     echo "Something went wrong with saving the results:" 1>&2
     echo "  Expected ${#workloadargs[@]} results, but got ${#results[@]}" 1>&2

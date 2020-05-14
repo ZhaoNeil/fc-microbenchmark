@@ -2,6 +2,10 @@
 
 ofname="dd-workload-$RANDOM"
 
-dd if=/dev/urandom of=/mnt/$ofname bs=1M count=$1
+#Write some gibberish to /mnt/$ofname, delete it afterwards
+#there must be some device mounted on /mnt
+dd if=/dev/urandom of=/mnt/$ofname bs=1M count=$1 status=none
+
+rm /mnt/$ofname
 
 reboot

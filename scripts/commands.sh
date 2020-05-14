@@ -60,6 +60,15 @@ curl_put '/drives/1' <<EOF
 }
 EOF
 
+curl_put '/drives/2' <<EOF
+{
+  "drive_id": "2",
+  "path_on_host": "$writefsLocation",
+  "is_read_only": false,
+  "is_root_device": false,
+  "partuuid": "writedisk"
+}
+EOF
 
 curl_put '/actions' <<EOF
 {

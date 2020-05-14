@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+
+
+description="Mount the writedisk."
+
+
+start()
+{
+        mount -t ext4 /dev/vdb /mnt
+        return 0
+}

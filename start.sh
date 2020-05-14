@@ -7,22 +7,16 @@
 ###     2020 (c)
 
 #Modes accepted by this script
-declare -a modes=( "benchmark" "baseline" )
+declare -a modes=( "benchmark" "baseline" "interactive")
 kernelLoc="./resources/vmlinux"
 fsLoc="./resources/rootfs.ext4"
 wlLoc="./workloads.txt"
+waLoc=""
 mode=${modes[0]}
-#Number of instances to be run maximally
-num=1000
-#This mix of workloads, default value means that when num=1000, and there are
-#three workloads, then each workload will get 333 instances. (This means that
-#the remainder of this division gets lost).
-#However, if there are only two workloads, the third part is not evaluated, thus
-#both workloads will receive equal instances, e.g. 500/500 (when num=1000)
-mix="3/3/3"
+
 
 usage() {
-    echo "Usage: ${0##*/} [-k <string>] [-f <string>] [-m <string>] [-w <string>] [-n <int>] [-x <string>] [-h]" 1>&2
+    echo "Usage: ${0##*/} [-k <string>] [-f <string>] [-m <string>] [-w <string>] [-n <int>] [-a <string>] [-h]" 1>&2
 }
 
 help() {
@@ -33,7 +27,7 @@ help() {
     echo "  -m  Mode                Mode to run, can be ${modes[@]}, default: $mode" 1>&2
     echo "  -w  File location       Location of the workloads.txt file, default: $wlLoc"
     echo "  -n  Instances           Number of instances to run maximally, default: $num" 1>&2
-    echo "  -x  Mix                 The mix of workloads, in format ii/ii/ii, default: $mix" 1>&2
+    echo "  -a  File location       File locations of the workload arguments, no defalt." 1>&2
     echo "  -h                      Display this" 1>&2
     exit 1
 }
@@ -73,6 +67,13 @@ while getopts ":k:f:m:w:n:h" o; do
                 exit 1
             fi
             ;;
+        a )
+            waLoc=$OPTARG
+            if [[ ! -e $wlLoc ]]; then
+                echo "$wlLoc does not exist!" 1>&2
+                exit 1
+            fi
+            ;;
         h )
             help
             exit 1
@@ -109,11 +110,14 @@ fi
 if [[ $mode -eq 0 ]]; then
     #benchmark
     echo "Running benchmark..."
-    ./scripts/benchmark.sh $kernelLoc $fsLoc $wlLoc $num $mix
+    ./scripts/benchmark.sh $kernelLoc $fsLoc $wlLoc $num $waLoc
 elif [[ $mode -eq 1 ]]; then
     #baseline
     echo "Determining baseline execution times..."
-    ./scripts/baseline.sh $kernelLoc $fsLoc $wlLoc $num
+    ./scripts/baseline.sh $kernelLoc $fsLoc $wlLoc $num $waLoc
+elif [[ $mode -eq 2 ]]; then
+    #interactive
+    ./scripts/launch-firecracker.sh $kernelLoc $fsLoc 1 default 0 v
 else
     exit 1
 fi
