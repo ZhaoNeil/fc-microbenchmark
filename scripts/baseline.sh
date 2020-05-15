@@ -62,7 +62,7 @@ idx=0
 
 for workloadarg in ${workloadargs[@]}; do
     # Skip comments
-    if [[ "${workloadarg:0:1}" -eq "#" ]]; then
+    if [[ "${workloadarg:0:1}" == "#" ]]; then
         continue
     fi
     # Get the id of the workload and the warg
@@ -85,7 +85,6 @@ for workloadarg in ${workloadargs[@]}; do
     for (( i=0; i < num; ++i )); do
         IFS=$OLDIFS; declare -a times=( $( { $myLoc/launch-firecracker.sh $kernelLoc $fsLoc $i $workload $arg t; } )) 
 
-        echo "${times[1]} ${times[3]}"
         #Fetch times and force base10 by stripping the dotsign.
         # TODO: now I assume that both times are equally precise, but this is 
         # not necessarily the case
