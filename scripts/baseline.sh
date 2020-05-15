@@ -61,6 +61,10 @@ fi
 idx=0
 
 for workloadarg in ${workloadargs[@]}; do
+    # Skip comments
+    if [[ "${workloadarg:0:1}" -eq "#" ]]; then
+        continue
+    fi
     # Get the id of the workload and the warg
     IFS=$','; split=( $workloadarg )
     wno=${split[0]//[^0-9]/}

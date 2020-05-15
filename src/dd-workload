@@ -7,5 +7,3 @@ ofname="dd-workload-$RANDOM"
 dd if=/dev/urandom of=/mnt/$ofname bs=1M count=$1 status=none
 
 rm /mnt/$ofname
-
-reboot
