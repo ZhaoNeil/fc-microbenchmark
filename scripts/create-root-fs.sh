@@ -6,12 +6,15 @@ defaultName="rootfs.ext4"
 #Argument values
 fsName="${1:-$defaultName}"
 
+#Determine current architecture
+arch="$(uname -m)"
+
 #Script variables
 tmpDir="/tmp/rootfs"
 tmpFile="apktools.tar.gz"
 alpineMirror="http://nl.alpinelinux.org/alpine"
 alpineBranch="latest-stable"
-alpineURL="https://github.com/alpinelinux/apk-tools/releases/download/v2.10.4/apk-tools-2.10.4-x86_64-linux.tar.gz"
+alpineURL="https://github.com/alpinelinux/apk-tools/releases/download/v2.10.3/apk-tools-2.10.3-${arch}-linux.tar.gz"
 
 pushd . > /dev/null
 
@@ -51,7 +54,7 @@ sudo touch "$tmpDir/fs/etc/apk/repositories"
 echo "$alpineMirror/$alpineBranch/main" | sudo tee "$tmpDir/fs/etc/apk/repositories" > /dev/null
 echo "$alpineMirror/$alpineBranch/community" | sudo tee -a "$tmpDir/fs/etc/apk/repositories" > /dev/null
 
-sudo $tmpDir/apk --root "$tmpDir/fs" --update-cache --initdb --allow-untrusted --arch x86_64 add alpine-base util-linux openrc bash
+sudo $tmpDir/apk --root "$tmpDir/fs" --update-cache --initdb --allow-untrusted --arch ${arch} add alpine-base util-linux openrc bash
 
 # Remove the spawning getty's
 cat <<EOF > ./inittab

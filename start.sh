@@ -8,11 +8,13 @@
 
 #Modes accepted by this script
 declare -a modes=( "benchmark" "baseline" "interactive")
-kernelLoc="./resources/vmlinux"
+arch="$(uname -m)"
+kernelLoc="./resources/vmlinux-${arch}"
 fsLoc="./resources/rootfs.ext4"
 wlLoc="./workloads.txt"
 waLoc=""
 mode=${modes[0]}
+num=10
 
 
 usage() {
@@ -24,10 +26,10 @@ help() {
     usage
     echo "  -k  File location       Location of the kernel to be used, default: $kernelLoc" 1>&2
     echo "  -f  File location       Location of the root filesystem, default: $fsLoc" 1>&2
-    echo "  -m  Mode                Mode to run, can be ${modes[@]}, default: $mode" 1>&2
-    echo "  -w  File location       Location of the workloads.txt file, default: $wlLoc"
+    echo "  -m  Mode                Mode to run, can be \"${modes[@]}\", default: $mode" 1>&2
+    echo "  -w  File location       Location of the workloads.txt file, default: $wlLoc" 1>&2
     echo "  -n  Instances           Number of instances to run maximally, default: $num" 1>&2
-    echo "  -a  File location       File locations of the workload arguments, no defalt." 1>&2
+    echo "  -a  File location       File locations of the workload arguments, no default." 1>&2
     echo "  -h                      Display this" 1>&2
     exit 1
 }
@@ -119,5 +121,6 @@ elif [[ $mode -eq 2 ]]; then
     #interactive
     ./scripts/launch-firecracker.sh $kernelLoc $fsLoc 1 default 0 v
 else
+    #Fall-through
     exit 1
 fi

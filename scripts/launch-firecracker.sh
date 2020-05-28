@@ -14,6 +14,7 @@ memSize=128
 fcSock="/tmp/firecracker-$fcID.socket"
 fcOutput="/tmp/firecracker-$fcID.output"
 
+
 #Import issue_commands
 source $myLocation/commands.sh
 
