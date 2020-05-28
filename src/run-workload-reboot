@@ -16,10 +16,11 @@ wArg="${wArg##*=}"
 #The workloadName is determined by the runlevel
 workLoadName="$(/bin/rc-status -r)"
 
+TIMEFORMAT="%3R"
 #Print execution time of this workload, dump the regular output
-declare -a etime=( $( { time -p $workLoadName $wArg; }  2>&1 > /dev/null )) 
+etime=$( { time $workLoadName $wArg; }  2>&1 > /dev/null )
 #Print the runtime as ms (without the dot, e.g. 0.15 to 015)
-echo "WORKLOADRUNTIME ${etime[1]//./}"
+echo "WORKLOADRUNTIME ${etime//./}"
 
 #Reboot (kill the VM)
 /sbin/reboot

@@ -14,6 +14,8 @@ memSize=128
 fcSock="/tmp/firecracker-$fcID.socket"
 fcOutput="/tmp/firecracker-$fcID.output"
 
+#Assert that 'time' always outputs 3-decimal precision
+TIMEFORMAT="%3R"
 
 #Import issue_commands
 source $myLocation/commands.sh
@@ -77,8 +79,9 @@ if [[ $asDeamon -eq 0 ]]; then
     )&
     #Launch the firecracker instance and time its runtime
     if [[ $timeOutput -eq 1 ]]; then
-        declare -a fctime=( $( { time -p firecracker --api-sock "$fcSock"; } 2>&1 > $fcOutput  ) )
-        fctime=${fctime[1]//./}
+        fctime=$( { time firecracker --api-sock "$fcSock"; } 2>&1 > $fcOutput  )
+        #Remove the dot
+        fctime=${fctime//./}
         echo "fc: $fctime"
 
         vmtime="$(cat $fcOutput | grep WORKLOADRUNTIME)"
