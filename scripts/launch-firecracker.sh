@@ -79,7 +79,9 @@ if [[ $asDeamon -eq 0 ]]; then
     )&
     #Launch the firecracker instance and time its runtime
     if [[ $timeOutput -eq 1 ]]; then
-        fctime=$( { time firecracker --api-sock "$fcSock"; } 2>&1 > $fcOutput  )
+        #Had to redirect firecracker output to null, as it sometimes throws a warning,
+        #which messes up the processing of results
+        fctime=$( { time (firecracker --api-sock "$fcSock" 2>/dev/null); } 2>&1 > $fcOutput  )
         #Remove the dot
         fctime=${fctime//./}
         echo "fc: $fctime"

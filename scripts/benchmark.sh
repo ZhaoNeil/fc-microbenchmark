@@ -27,6 +27,9 @@ for workloadarg in ${workloadargs[@]}; do
     workload=${workloads[$workloadnum]}
     warg=${split[1]//[^0-9]/}
 
+    #Unset to avoid weird behavior later on
+    unset IFS
+
     if [[ -z "$workload" ]]; then
         echo "Invalid workload number: $workloadnum" 1>&2
         continue
@@ -40,12 +43,13 @@ for workloadarg in ${workloadargs[@]}; do
     (
         #Save a local copy of workloadnum
         myworknum=$workloadnum
- 
-        declare -a res=( $( { $myLoc/launch-firecracker.sh $kernelLoc $fsLoc $thisId $workload $warg t; } ) )
+        declare -a res=( $( $myLoc/launch-firecracker.sh $kernelLoc $fsLoc $thisId $workload $warg t ) )
         #Process execution times
         fctime=${res[1]//[^0-9]/}
+        fctime=${fctime#"${fctime%%[!0]*}"}
         fctime=$(( 10#$fctime ))
         vmtime=${res[3]//[^0-9]/}
+        vmtime=${vmtime#"${vmtime%%[!0]*}"}
         vmtime=$(( 10#$vmtime ))
         
         #Write results to the resultsfile
@@ -94,6 +98,6 @@ for ((i=0; i < ${#workloads[@]}; ++i)); do
     echo "${workloads[$i]},${fcresults[$i]},${vmresults[$i]},${avgfc},${avgvm}"
 done
 
-rm $fileResults
+mv $fileResults ./results-benchmark.txt
 
-IFS=$OLDIFS
+echo "Raw results placed in ./results-benchmark.txt" 1>&2

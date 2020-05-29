@@ -96,9 +96,13 @@ echo "Checking if kernel exists..."
 
 if [[ ! -e "$resourceDir/$kernelName" ]]; then
     echo "Not found, do you wish to build it from source?"
-
+    exit 1
 else
     echo "Found!"
 fi
+
+echo "Disabling SMT..."
+
+echo "d" | sudo ./scripts/toggleHT.sh
 
 echo "You are ready to go!"
