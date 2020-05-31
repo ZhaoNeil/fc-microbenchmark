@@ -3,3 +3,4 @@ mountdir
 fs
 *.ext4
 .vscode
+*.lock

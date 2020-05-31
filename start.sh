@@ -36,7 +36,7 @@ help() {
 
 #Parse the arguments
 
-while getopts ":k:f:m:w:n:h" o; do
+while getopts ":k:f:m:w:n:a:h" o; do
     case $o in
         k )
             kernelLoc=$OPTARG
@@ -71,8 +71,8 @@ while getopts ":k:f:m:w:n:h" o; do
             ;;
         a )
             waLoc=$OPTARG
-            if [[ ! -e $wlLoc ]]; then
-                echo "$wlLoc does not exist!" 1>&2
+            if [[ ! -e $waLoc ]]; then
+                echo "$waLoc does not exist!" 1>&2
                 exit 1
             fi
             ;;
