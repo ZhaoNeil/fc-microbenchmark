@@ -122,5 +122,12 @@ elif [[ "$arch" == "aarch64" ]]; then
     echo "0" | sudo tee /sys/devices/system/cpu/cpufreq/boost
 fi
 
+echo "Raising pid max..."
+
+echo "4194303" | sudo tee /proc/sys/kernel/pid_max
+
+echo "Raising user limits..."
+
+
 
 echo "You are ready to go!"

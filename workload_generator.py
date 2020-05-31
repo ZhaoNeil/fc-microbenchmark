@@ -66,6 +66,9 @@ def read_file(filename: str) -> list:
     #Fall-through
     return []
 
+def generate_poisson_workload(n: int) -> list:
+    return ["Generate\n", "poisson\n", "process\n"]
+
 def generate_workload(wid_args: dict, mix: list, n: int) -> list:
     rng = np.random.default_rng()
 
@@ -91,6 +94,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("baseline", type=str, help="Filename of the baseline-argument textfile", default="baseline-arguments.txt")
     arg_parser.add_argument("N", type=int, help="Number of entries in the workload-argument file.", default=5000)
     arg_parser.add_argument("mix", type=str, help="Mixture of workloads, e.g. 1/1/1", default="1/1/1")
+    arg_parser.add_argument("-p", "--poisson", dest="poisson", action="store_true", default=False)
     arg_parser.add_argument("-o", "--output", type=str, help="If specified, write output to filename, rather than stdout.")
 
     if len(sys.argv) < 4:
@@ -110,8 +114,12 @@ if __name__ == "__main__":
         print("The mix contains {} values, but there are {} workload IDs!".format(len(mix), len(valid_id_arguments)))
         exit(-1)
 
-    
-    output = generate_workload(valid_id_arguments, mix, n)
+    output = []
+
+    if args.poisson:
+        output = generate_poisson_workload(n)
+    else:
+        output = generate_workload(valid_id_arguments, mix, n)
 
     if args.output:
         with open(args.output, "w") as out:
