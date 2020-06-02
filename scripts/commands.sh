@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Shamelessly copied curl_put from https://github.com/firecracker-microvm/firecracker-demo/
+#Sourced from https://github.com/firecracker-microvm/firecracker-demo/
 CURL=(curl --silent --show-error --header "Content-Type: application/json" --unix-socket "$fcSock" --write-out "HTTP %{http_code}")
 
 curl_put() {

@@ -1,11 +1,13 @@
 #!/bin/bash
-
+arch="$(uname -m)"
 rootfsName="rootfs.ext4"
 writefsName="writedisk.ext4"
-kernelName="vmlinux"
+kernelName="vmlinux-$arch"
 
 tmpDir="/tmp/fc-microbenchmark"
 resourceDir="./resources"
+
+fcDownload="https://github.com/firecracker-microvm/firecracker/releases/download/v0.21.1/firecracker-v0.21.1-$arch"
 
 workloadsFile="${1:-"workloads.txt"}"
 
@@ -17,9 +19,10 @@ echo "Checking if AWS Firecracker is in \$PATH..."
 which firecracker > /dev/null
 
 if [[ $? -ne 0 ]]; then
-    echo "Firecracker not found!"
-    echo "Please make sure it is installed and the binary is in \$PATH"
-    exit 1
+    echo "Downloading Firecracker into ~/bin"
+    mkdir ~/bin
+    curl -fsSL "$fcDownload" -o ~/bin/firecracker
+    chmod +x ~/bin/firecracker
 else
     echo "Found!"
 fi
