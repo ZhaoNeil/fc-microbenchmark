@@ -16,6 +16,13 @@ waLoc=""
 mode=${modes[0]}
 num=10
 
+which firecracker > /dev/null
+
+if [[ $? -ne 0 ]]; then
+    echo "Firecracker is not installed! Please run ./setup.sh" 1>&2
+    exit 1
+fi
+
 
 usage() {
     echo "Usage: ${0##*/} [-k <string>] [-f <string>] [-m <string>] [-w <string>] [-n <int>] [-a <string>] [-h]" 1>&2
