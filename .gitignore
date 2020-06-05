@@ -4,3 +4,4 @@ fs
 *.ext4
 .vscode
 *.lock
+get-pip.py
