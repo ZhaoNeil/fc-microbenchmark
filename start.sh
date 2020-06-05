@@ -119,7 +119,7 @@ fi
 # Set ulimits for this shell (and thus for all subshells)
 # Snippet from StackOverflow: https://stackoverflow.com/questions/28068414/how-do-i-set-all-ulimits-unlimited-for-all-users/28068611#28068611
 for opt in $(ulimit -a | sed 's/.*\-\([a-z]\)[^a-zA-Z].*$/\1/'); do
-    ulimit -$opt ulimited 2> /dev/null
+    ulimit -$opt unlimited 2> /dev/null
 done
 
 if [[ $mode -eq 0 ]]; then
