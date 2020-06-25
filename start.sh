@@ -15,6 +15,7 @@ wlLoc="./workloads.txt"
 waLoc=""
 mode=${modes[0]}
 num=10
+usePoisson=0
 
 which firecracker > /dev/null
 
@@ -37,13 +38,14 @@ help() {
     echo "  -w  File location       Location of the workloads.txt file, default: $wlLoc" 1>&2
     echo "  -n  Instances           Number of instances to run maximally, default: $num" 1>&2
     echo "  -a  File location       File locations of the workload arguments, no default." 1>&2
+    echo "  -p                      Toggle usage of poisson timings incorporated in workload arugments file." 1>&2
     echo "  -h                      Display this" 1>&2
     exit 1
 }
 
 #Parse the arguments
 
-while getopts ":k:f:m:w:n:a:h" o; do
+while getopts ":k:f:m:w:n:a:hp" o; do
     case $o in
         k )
             kernelLoc=$OPTARG
@@ -87,6 +89,9 @@ while getopts ":k:f:m:w:n:a:h" o; do
             help
             exit 1
             ;;
+        p )
+            usePoisson=1
+            ;;
         \? )
             echo "Invalid option: -$OPTARG" 1>&2
             usage
@@ -125,7 +130,7 @@ done
 if [[ $mode -eq 0 ]]; then
     #benchmark
     echo "Running benchmark..."
-    ./scripts/benchmark.sh $kernelLoc $fsLoc $wlLoc $num $waLoc
+    ./scripts/benchmark.sh $kernelLoc $fsLoc $wlLoc $num $waLoc $usePoisson
 elif [[ $mode -eq 1 ]]; then
     #baseline
     echo "Determining baseline execution times..."

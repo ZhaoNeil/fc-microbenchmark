@@ -13,6 +13,9 @@ From here, it will generate a text-file that contains N entries, with a specifie
 This program does not check whether the id of the workloads (first column in the baseline-argument file) are valid.
 """
 
+#Random number generator needed for some Numpy-functions
+rng = np.random.default_rng()
+
 def parse_mix(raw: str) -> list:
     """Parse a raw string that indicates a mix into a list. For example, 
     "3/2/1" will be converted to [0.5, 0.333, 0.166]
@@ -66,11 +69,10 @@ def read_file(filename: str) -> list:
     #Fall-through
     return []
 
-def generate_poisson_workload(n: int) -> list:
-    return ["Generate\n", "poisson\n", "process\n"]
+
 
 def generate_workload(wid_args: dict, mix: list, n: int) -> list:
-    rng = np.random.default_rng()
+    
 
     if n < 1:
         raise ValueError("generate_workload: n must be larger than 1, got {}".format(n))
@@ -88,13 +90,30 @@ def generate_workload(wid_args: dict, mix: list, n: int) -> list:
 
     return ret_list
 
+def generate_poisson_workload(wid_args: dict, mix: list, n: int, t: float) -> list:
+    """
+        Generate a list of start times for instances
+    """
+    workload = generate_workload(wid_args, mix, n)
+
+    time = t * 3600 #t is in hours
+    lambda_poisson = n / time
+    #Generate intervals via Poisson
+    intervals = rng.exponential(1.0/lambda_poisson, len(workload))
+
+    #Zip the strings of workload and interval
+    str_cat = lambda x, y: x[:-1] + ", {:.3f} \n".format(y)
+    workload = list(map(str_cat, workload, intervals))
+
+    return workload
+
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description=_PRDSCR_)
 
     arg_parser.add_argument("baseline", type=str, help="Filename of the baseline-argument textfile", default="baseline-arguments.txt")
     arg_parser.add_argument("N", type=int, help="Number of entries in the workload-argument file.", default=5000)
     arg_parser.add_argument("mix", type=str, help="Mixture of workloads, e.g. 1/1/1", default="1/1/1")
-    arg_parser.add_argument("-p", "--poisson", dest="poisson", action="store_true", default=False)
+    arg_parser.add_argument("-p", "--poisson", dest="poisson", type=float, default=False)
     arg_parser.add_argument("-o", "--output", type=str, help="If specified, write output to filename, rather than stdout.")
 
     if len(sys.argv) < 4:
@@ -117,7 +136,7 @@ if __name__ == "__main__":
     output = []
 
     if args.poisson:
-        output = generate_poisson_workload(n)
+        output = generate_poisson_workload(valid_id_arguments, mix, n, args.poisson)
     else:
         output = generate_workload(valid_id_arguments, mix, n)
 

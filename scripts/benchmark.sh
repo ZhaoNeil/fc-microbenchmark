@@ -9,6 +9,7 @@ workloadsFile="${3:-"workloads.txt"}"
 #num is the amount of instances that may be active at the same moment
 num=${4:-1000}
 wargs=${5:-"$myLoc/../benchmark-arguments.txt"}
+isPoisson=${6:-0}
 
 fileResults="$myLoc/results"
 
@@ -26,6 +27,7 @@ for workloadarg in ${workloadargs[@]}; do
     workloadnum=${split[0]//[^0-9]/}
     workload=${workloads[$workloadnum]}
     warg=${split[1]//[^0-9]/}
+    sleeptime=${split[2]//[^0-9\.]}
 
     #Unset to avoid weird behavior later on
     unset IFS
@@ -39,7 +41,7 @@ for workloadarg in ${workloadargs[@]}; do
     # Increment here, does not work in subshell
     thisId=$((idx++))
 
-    # Run this in a subshell for parallel execution
+    Run this in a subshell for parallel execution
     (
         #Save a local copy of workloadnum
         myworknum=$workloadnum
@@ -58,6 +60,11 @@ for workloadarg in ${workloadargs[@]}; do
         echo "$myworknum,$fctime,$vmtime" >> $fileResults
 
     )&
+
+    if [[ isPoisson -eq 1 ]]; then
+        echo "Sleeping for $sleeptime" 1>&2
+        sleep $sleeptime
+    fi
 
 done
 
