@@ -110,10 +110,10 @@ def generate_poisson_workload(wid_args: dict, mix: list, n: int, t: float) -> li
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description=_PRDSCR_)
 
-    arg_parser.add_argument("baseline", type=str, help="Filename of the baseline-argument textfile", default="baseline-arguments.txt")
-    arg_parser.add_argument("N", type=int, help="Number of entries in the workload-argument file.", default=5000)
+    arg_parser.add_argument("baseline", type=str, help="Filename of the baseline-argument text file", default="baseline-arguments.txt")
+    arg_parser.add_argument("N", type=int, help="Number of entries in the to be generated workload-argument file.", default=5000)
     arg_parser.add_argument("mix", type=str, help="Mixture of workloads, e.g. 1/1/1", default="1/1/1")
-    arg_parser.add_argument("-p", "--poisson", dest="poisson", type=float, default=False)
+    arg_parser.add_argument("-p", "--poisson", dest="poisson", type=float, help="If parameteris specified, the float number provided in addition to parameter will be used as time in hours.", default=False)
     arg_parser.add_argument("-o", "--output", type=str, help="If specified, write output to filename, rather than stdout.")
 
     if len(sys.argv) < 4:
