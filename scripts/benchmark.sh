@@ -41,7 +41,7 @@ for workloadarg in ${workloadargs[@]}; do
     # Increment here, does not work in subshell
     thisId=$((idx++))
 
-    Run this in a subshell for parallel execution
+    #Run this in a subshell for parallel execution
     (
         #Save a local copy of workloadnum
         myworknum=$workloadnum
