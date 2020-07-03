@@ -43,6 +43,8 @@ for workloadarg in ${workloadargs[@]}; do
 
     #Run this in a subshell for parallel execution
     (
+        #Start time in milliseconds from epoch (for data processing)
+        starttime=$(printf '%(%s)T\n' -1)
         #Save a local copy of workloadnum
         myworknum=$workloadnum
         declare -a res=( $( $myLoc/launch-firecracker.sh $kernelLoc $fsLoc $thisId $workload $warg t ) )
@@ -54,8 +56,6 @@ for workloadarg in ${workloadargs[@]}; do
         vmtime=${vmtime#"${vmtime%%[!0]*}"}
         vmtime=$(( 10#$vmtime ))
 
-        #Start time in milliseconds from epoch (for data processing)
-        starttime=$(printf '%(%s)T\n' -1)
         
         #Write results to the resultsfile
         #TODO: check if this does not result in data loss due to concurrent 
