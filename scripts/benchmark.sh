@@ -55,7 +55,7 @@ for workloadarg in ${workloadargs[@]}; do
         vmtime=$(( 10#$vmtime ))
 
         #Start time in milliseconds from epoch (for data processing)
-        starttime=(printf '%(%s)T\n' -1)
+        starttime=$(printf '%(%s)T\n' -1)
         
         #Write results to the resultsfile
         #TODO: check if this does not result in data loss due to concurrent 
