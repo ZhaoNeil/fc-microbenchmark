@@ -5,10 +5,10 @@ myLoc=${0%${0##*/}}
 #script standalone
 kernelLoc="${1:-"$myLoc/../resources/vmlinux"}"
 fsLoc="${2:-"$myLoc/../resources/rootfs.ext4"}"
-workloadsFile="${3:-"workloads.txt"}"
+workloadsFile="${3:-"$myLoc/../parameters/workloads.txt"}"
 #num is the amount of instances that may be active at the same moment
 num=${4:-1000}
-wargs=${5:-"$myLoc/../benchmark-arguments.txt"}
+wargs=${5:-"$myLoc/../parameters/benchmark-arguments.txt"}
 isPoisson=${6:-0}
 
 fileResults="$myLoc/results"
@@ -45,6 +45,7 @@ for workloadarg in ${workloadargs[@]}; do
     (
         #Start time in milliseconds from epoch (for data processing)
         starttime=$(printf '%(%s)T\n' -1)
+        mywarg=$warg
         #Save a local copy of workloadnum
         myworknum=$workloadnum
         declare -a res=( $( $myLoc/launch-firecracker.sh $kernelLoc $fsLoc $thisId $workload $warg t ) )
@@ -60,7 +61,7 @@ for workloadarg in ${workloadargs[@]}; do
         #Write results to the resultsfile
         #TODO: check if this does not result in data loss due to concurrent 
         #       writes
-        echo "$myworknum,$fctime,$vmtime,$starttime" >> $fileResults
+        echo "$myworknum,$mywarg,$fctime,$vmtime,$starttime" >> $fileResults
 
     )&
 

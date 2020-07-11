@@ -13,7 +13,7 @@ myLoc=${0%${0##*/}}
 #script standalone
 kernelLoc="${1:-"$myLoc/../resources/vmlinux"}"
 fsLoc="${2:-"$myLoc/../resources/rootfs.ext4"}"
-workloadsFile="${3:-"workloads.txt"}"
+workloadsFile="${3:-"$myLoc/../parameters/workloads.txt"}"
 #Number of times each workload must be run
 num=${4:-10}
 wargs=${5:-"$myLoc/../baseline-arguments.txt"}
