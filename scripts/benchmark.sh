@@ -11,7 +11,8 @@ num=${4:-1000}
 wargs=${5:-"$myLoc/../parameters/benchmark-arguments.txt"}
 isPoisson=${6:-0}
 
-fileResults="$myLoc/results"
+
+fileResults="$myLoc/results/results-${wargs##*/}"
 
 #Backup for when we're done
 OLDIFS=$IFS
@@ -85,30 +86,30 @@ if [[ ${#results[@]} -ne ${#workloadargs[@]} ]]; then
     echo "  Expected ${#workloadargs[@]} results, but got ${#results[@]}" 1>&2
 fi
 
-# Array for the execution time of the workload inside the Firecracker instance
-vmresults=()
-# Array for the execution time of the Firecracker instance itself
-# this accounts for the total runtime
-fcresults=()
+# # Array for the execution time of the workload inside the Firecracker instance
+# vmresults=()
+# # Array for the execution time of the Firecracker instance itself
+# # this accounts for the total runtime
+# fcresults=()
 
-for result in ${results[@]}; do
-    IFS=$','; split=($result)
-    wno=${split[0]}
-    fct=${split[1]}
-    vmt=${split[2]}
+# for result in ${results[@]}; do
+#     IFS=$','; split=($result)
+#     wno=${split[0]}
+#     fct=${split[1]}
+#     vmt=${split[2]}
 
 
-    vmresults[$wno]=$((vmresults[$wno] + vmt))
-    fcresults[$wno]=$((fcresults[$wno] + fct))
-done
+#     vmresults[$wno]=$((vmresults[$wno] + vmt))
+#     fcresults[$wno]=$((fcresults[$wno] + fct))
+# done
 
-echo "#Workload, total fc time, total vm time, avg fc time, avg vm time"
-for ((i=0; i < ${#workloads[@]}; ++i)); do
-    avgvm=$( echo "scale=4; ${vmresults[$i]}/${#results[@]}" | bc)
-    avgfc=$( echo "scale=4; ${fcresults[$i]}/${#results[@]}" | bc)
-    echo "${workloads[$i]},${fcresults[$i]},${vmresults[$i]},${avgfc},${avgvm}"
-done
+# echo "#Workload, total fc time, total vm time, avg fc time, avg vm time"
+# for ((i=0; i < ${#workloads[@]}; ++i)); do
+#     avgvm=$( echo "scale=4; ${vmresults[$i]}/${#results[@]}" | bc)
+#     avgfc=$( echo "scale=4; ${fcresults[$i]}/${#results[@]}" | bc)
+#     echo "${workloads[$i]},${fcresults[$i]},${vmresults[$i]},${avgfc},${avgvm}"
+# done
 
-mv $fileResults ./results-benchmark.txt
+# mv $fileResults ./results-benchmark.txt
 
-echo "Raw results placed in ./results-benchmark.txt" 1>&2
+echo "Results placed in $fileResults" 1>&2

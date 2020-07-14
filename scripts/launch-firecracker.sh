@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#Enable job control
+set -m
+
 #Get the location of this script
 myLocation=${0%${0##*/}}
 
@@ -69,6 +72,8 @@ if [[ $timeOutput -ne 1 ]]; then
     echo "Launching Firecracker..."
 fi
 
+pidIssuer=0
+
 if [[ $asDeamon -eq 0 ]]; then
     (
         # wait for the apisock to come up
@@ -77,6 +82,9 @@ if [[ $asDeamon -eq 0 ]]; then
         done
         issue_commands $verbose
     )&
+    #Capture the pid of the command issuer
+    pidIssuer=$!
+
     #Launch the firecracker instance and time its runtime
     if [[ $timeOutput -eq 1 ]]; then
         #Had to redirect firecracker output to null, as it sometimes throws a warning,
@@ -100,3 +108,10 @@ elif [[ $asDeamon -ne 0 ]]; then
 fi
 
 rm -rf "$fcSock"
+
+#if we get here, then fc is already terminated, either because it is actually 
+#done, or it crashed. Either way, this script *must* terminate
+
+if [[ $pidIssuer -ne 0 ]]; then
+    kill -- -$pidIssuer
+fi
