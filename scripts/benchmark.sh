@@ -12,7 +12,7 @@ wargs=${5:-"$myLoc/../parameters/benchmark-arguments.txt"}
 isPoisson=${6:-0}
 
 
-fileResults="$myLoc/results/results-${wargs##*/}"
+fileResults="$myLoc/../results/results-${wargs##*/}"
 
 #Backup for when we're done
 OLDIFS=$IFS
