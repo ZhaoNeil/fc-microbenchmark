@@ -9,7 +9,7 @@ resourceDir="./resources"
 
 fcDownload="https://github.com/firecracker-microvm/firecracker/releases/download/v0.21.1/firecracker-v0.21.1-$arch"
 
-workloadsFile="${1:-"workloads.txt"}"
+workloadsFile="${1:-"./parameters/workloads.txt"}"
 
 #Read installed workloads from file to array
 workloads=($(cat $workloadsFile))
