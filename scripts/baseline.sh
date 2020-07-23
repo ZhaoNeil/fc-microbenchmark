@@ -60,6 +60,8 @@ fi
 
 idx=0
 
+echo "#workloadID, workload argument, tFC, tVM"
+
 for workloadarg in ${workloadargs[@]}; do
     # Skip comments
     if [[ "${workloadarg:0:1}" == "#" ]]; then
@@ -77,14 +79,13 @@ for workloadarg in ${workloadargs[@]}; do
         continue
     fi
 
-    echo "${workload},${arg}"
+    echo "${workload},${arg}" 1>&2
 
     tottime=0
     vmtottime=0
 
     for (( i=0; i < num; ++i )); do
         IFS=$OLDIFS; declare -a times=( $( { $myLoc/launch-firecracker.sh $kernelLoc $fsLoc $i $workload $arg t; } )) 
-
         #Fetch times and force base10 by stripping the dotsign.
         # TODO: now I assume that both times are equally precise, but this is 
         # not necessarily the case
@@ -92,15 +93,10 @@ for workloadarg in ${workloadargs[@]}; do
         fctime=$(( 10#$fctime ))
         vmtime=${times[3]//[^0-9]/}
         vmtime=$(( 10#$vmtime ))
-        #Add values to overall values
-        vmtottime=$((vmtottime + vmtime))
-        tottime=$((tottime + fctime))
 
-        echo "${i},${fctime},${vmtime}"
+        echo "Run ${i}: ${fctime} and ${vmtime}" 1>&2
+        echo "${wno},${arg},${i},${fctime},${vmtime}"
     done
-
-    echo "total,${tottime},${vmtottime}"
-    echo ""
     ((++idx))
 done
 

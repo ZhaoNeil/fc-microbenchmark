@@ -113,5 +113,6 @@ rm -rf "$fcSock"
 #done, or it crashed. Either way, this script *must* terminate
 
 if [[ $pidIssuer -ne 0 ]]; then
-    kill -- -$pidIssuer
+    #Suppress all output (will fail if the issuer did terminate as it should)
+    kill -- -$pidIssuer > /dev/null 2> /dev/null
 fi
