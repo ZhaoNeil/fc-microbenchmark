@@ -1,5 +1,0 @@
-Running benchmark...
-#Workload, total fc time, total vm time, avg fc time, avg vm time
-primenumber,13206051,5957524,2641.2102,1191.5048
-dd-workload,7415593,49327,1483.1186,9.8654
-stream,21233517,13571386,4246.7034,2714.2772
