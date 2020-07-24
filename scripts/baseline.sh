@@ -60,7 +60,7 @@ fi
 
 idx=0
 
-echo "#workloadID, workload argument, tFC, tVM"
+echo "workloadID, workload argument, run, tFC, tVM"
 
 for workloadarg in ${workloadargs[@]}; do
     # Skip comments

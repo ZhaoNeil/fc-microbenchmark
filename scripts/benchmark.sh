@@ -21,6 +21,8 @@ IFS=$'\n'
 workloads=( $(cat $workloadsFile ) )
 workloadargs=( $(cat $wargs ) )
 
+echo "workloadID, workload argument, tFC, tVM, start time"
+
 idx=0
 for workloadarg in ${workloadargs[@]}; do
     IFS=$','

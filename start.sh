@@ -133,7 +133,7 @@ if [[ $mode -eq 0 ]]; then
     ./scripts/benchmark.sh $kernelLoc $fsLoc $wlLoc $num $waLoc $usePoisson
 elif [[ $mode -eq 1 ]]; then
     #baseline
-    echo "Determining baseline execution times..."
+    echo "Determining baseline execution times..." 1>&2
     ./scripts/baseline.sh $kernelLoc $fsLoc $wlLoc $num $waLoc
 elif [[ $mode -eq 2 ]]; then
     #interactive
