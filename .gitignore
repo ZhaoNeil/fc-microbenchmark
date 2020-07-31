@@ -5,3 +5,4 @@ fs
 .vscode
 *.lock
 get-pip.py
+*__pycache__*
