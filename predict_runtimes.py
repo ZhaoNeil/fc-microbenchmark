@@ -15,9 +15,7 @@ import numpy
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from process_results import (calculate_baselines, err, BASELINE_FILENAME, 
-                             calculate_average_baselines, COLUMN_WORKLOAD,
-                             COLUMN_ARGUMENT, COLUMN_START)
+from process_results import *
 
 COLUMN_PREDICT_END = "pred. end time"
 
@@ -70,9 +68,16 @@ def predict_workload_runtime(baseline: str, workload: str) -> int:
 
     workload[COLUMN_PREDICT_END] = end_times
 
+
     #Print some statistics to stderr (will also be appended to the dataframe)
     err("Predicted runtime = {}".format(workload[COLUMN_PREDICT_END].max()))
     err("\t \t {}th instance determines runtime".format(workload[COLUMN_PREDICT_END].idxmax()))
+
+    workload[COLUMN_END] = workload[COLUMN_PREDICT_END]
+    max_conc_evt = concurrency_histogram(workload, 1000)
+    del workload[COLUMN_END]
+
+    err("Maximal amount of concurrent instances: {}".format(max_conc_evt))
 
 
 
@@ -89,7 +94,7 @@ def predict_workload_runtime(baseline: str, workload: str) -> int:
     return workload
 
 if __name__ == "__main__":
-    predict_workload_runtime("./results/001/baseline.txt", "./parameters/poisson-10000-1hr-equal.txt")
+    # predict_workload_runtime("./results/001/baseline.txt", "./parameters/poisson-100-1hr-equal.txt")
 
     arg_parser = argparse.ArgumentParser(description=_PROGRAM_DESCRIPTION_)
 
@@ -100,3 +105,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         arg_parser.print_help()
         exit(-1)
+
+    args = arg_parser.parse_args()
+
+    predict_workload_runtime(args.baseline, args.workload)

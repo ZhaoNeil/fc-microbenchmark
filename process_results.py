@@ -48,7 +48,7 @@ def err(msg: str) -> None:
 def read_csv(filename: str) -> pd.DataFrame:
     """Simple wrapper for reading a csv with pandas"""
     if not path.isfile(filename):
-        raise ValueError("{} is not a file".format(filename))
+        raise ValueError("{} is not a file, or does not exist".format(filename))
 
     return pd.read_csv(filename, skipinitialspace=True)
 
@@ -121,25 +121,116 @@ def calculate_average_baselines(directory: str) -> dict:
     return  { 
                 w: { 
                     a:  [
-                            v / counter for v in average_baselines[w][a]
+                            round(v / counter) for v in average_baselines[w][a]
                         ] for a in average_baselines[w].keys()
                     } for w in average_baselines.keys()
             }
 
 def max_concurrent_events(df: pd.DataFrame) -> int:
+    """Old function to calculate the maximal amount of concurrent events
+    """
+    total = len(df)
+    max_count = 0
+    i = 0
+    for idx, row in df.iterrows():
+        start_time  = row[COLUMN_START]
+        end_time    = row[COLUMN_END]
+
+        curr_count = len(df[((df[COLUMN_END] > start_time) & (df[COLUMN_END] <= end_time)) | ((df[COLUMN_START] >= start_time) & (df[COLUMN_START] < end_time)) | ((start_time >= df[COLUMN_START]) & (end_time <= df[COLUMN_END]))])
+
+
+        # curr_count = 0
+        # for idx2, row2 in df.iterrows():
+        #     if start_time < row2[COLUMN_END]
+        #         curr_count += 1
+
+        # curr_count = len(df[(df[COLUMN_START] <= df.loc[idx, COLUMN_START]) & (df[COLUMN_END] < df.loc[idx, COLUMN_END])])
+        if curr_count > max_count:
+            max_count = curr_count
+
+        print( "\r{}/{}".format(i, total), file=sys.stderr, end="")
+        i += 1
+        # print("start = {}, end = {}, # = {}".format(start_time, end_time, curr_count))
+
+    err("")
+
+
+    return max_count
+
+def concurrency_histogram(df: pd.DataFrame, bin_size=1) -> list:
     """Given a processed dataframe, calculate the maximal number of concurrent 
-    jobs going on at a certain point in the runtime of the benchmark"""
+    jobs going on at a certain point in the runtime of the benchmark.
+
+    Furthermore, a histogram can be plotted with the data returned by this 
+    function
+    
+    :param df: The dataframe with start and end timestamps
+    :type df: pd.DataFrame
+    :param bin_size: Bin size of the histogram in milliseconds
+    :type bin_size: int
+    :returns: A list with the bins
+    :rtype: list
+    """
     if type(df) is not pd.DataFrame:
         raise TypeError("max_concurrent_events: df is not of correct type.")
 
     if not (COLUMN_END in df and COLUMN_START in df): 
-        raise ValueError("df misses information!")
+        raise ValueError("max_concurrent_events: df misses information!")
 
-    max_count = 0
-    curr_count = 0
+    err("Calculating max. concurrent instances...")
+
+   
+    end_time = round(df[COLUMN_END].max())
+
+    second_bins = [-1 for i in range(0, end_time, bin_size)]
+    check = second_bins.copy()
+
+    for second in range(0, end_time, bin_size):
+        curr_second = 0
+        bin_start = second
+        bin_end = second + bin_size
+        #Naive approach
+        # for idx, row in df.iterrows():
+        #     if (row[COLUMN_END] > bin_start and row[COLUMN_END] <= bin_end) or (row[COLUMN_START] >= bin_start and row[COLUMN_START] < bin_end) or (bin_start >= row[COLUMN_START] and bin_end <= row[COLUMN_END]):
+        #         curr_second += 1
+        # #Do this here avoids repeatedly calculating the index
+        # second_bins[round(second / bin_size)] = curr_second
+
+        #Panda-ized approach (probably faster)
+        second_bins[round(second/bin_size)] = len(df[((df[COLUMN_END] > bin_start) & (df[COLUMN_END] <= bin_end)) | ((df[COLUMN_START] >= bin_start) & (df[COLUMN_START] < bin_end)) | ((bin_start >= df[COLUMN_START]) & (bin_end <= df[COLUMN_END]))])
+
+
+        print("\r{}/{} seconds processed.".format(second, end_time), file=sys.stderr, end="")
+
+    err("")
+
+    return second_bins
+
+def calculate_deltas(df: pd.DataFrame, baselines: dict) -> pd.DataFrame:
+    if type(df) is not pd.DataFrame or type(baselines) is not dict:
+        raise TypeError("calculate_deltas: arguments are of incorrect type")
+
+    if (COLUMN_START not in df) or (COLUMN_TIMEFC not in df) \
+        or (COLUMN_WORKLOAD not in df) or (COLUMN_ARGUMENT not in df) \
+        or (COLUMN_TIMEVM not in df):
+        raise ValueError("calculate_deltas: missing columns in data")
+
+    #Calculate deltas, end times
+    delta_fc = [0 for i in range(0, len(df))]
+    delta_vm = delta_fc.copy()
+    end_time = delta_fc.copy()
 
     for idx, row in df.iterrows():
+        baseline = baselines.get(row[COLUMN_WORKLOAD], {0: 0}).get(row[COLUMN_ARGUMENT], [0, 0])
+        delta_fc[idx] = row[COLUMN_TIMEFC] - baseline[0]
+        delta_vm[idx] = row[COLUMN_TIMEVM] - baseline[1]
+        end_time[idx] = row[COLUMN_START] + row[COLUMN_TIMEFC]
 
+    df[COLUMN_END] = end_time
+    df[COLUMN_DELTA_FC] = delta_fc
+    df[COLUMN_DELTA_VM] = delta_vm
+
+    return df
 
 def process_data(directory: str) -> None:
     if not path.isdir(directory):
@@ -181,7 +272,7 @@ def process_data(directory: str) -> None:
     to_process = len(dir_files)
 
     for result_file in dir_files:
-        to_process += 1
+        processed_files += 1
         err("{}/{}: Processing {}".format(processed_files, to_process, result_file))
         #Result files are automatically named after the arguments file with
         #results added as prefix
@@ -198,50 +289,46 @@ def process_data(directory: str) -> None:
         start_time = result_df[COLUMN_START].min()
         result_df[COLUMN_START] = result_df[COLUMN_START] - start_time
 
-        #Calculate deltas, end times
-        delta_fc = [0 for i in range(0, len(result_df))]
-        delta_vm = delta_fc.copy()
-        end_time = delta_fc.copy()
+        result_df = calculate_deltas(result_df, baselines)
 
-        for idx, row in result_df.iterrows():
-            baseline = baselines.get(row[COLUMN_WORKLOAD], {0: 0}).get(row[COLUMN_ARGUMENT], [0, 0])
-            delta_fc[idx] = row[COLUMN_TIMEFC] - baseline[0]
-            delta_vm[idx] = row[COLUMN_TIMEVM] - baseline[1]
-            end_time[idx] = row[COLUMN_START] + row[COLUMN_TIMEFC]
-
-        result_df[COLUMN_END] = end_time
-        result_df[COLUMN_DELTA_FC] = delta_fc
-        result_df[COLUMN_DELTA_VM] = delta_vm
-
-        result_df.to_csv(path.join(directory, "processed-{}".format(result_file)))
+        result_df.to_csv(path.join(directory, "processed-{}".format(result_file)), index=False)
 
         ### Calculate some meta-data and save it as well
 
+        conc_events = concurrency_histogram(result_df)
         meta_data = {}
-        meta_data["Totals"] = {}
-        meta_data["Statistics"] = {}
+        totals = {}
+        stats = {}
 
-        meta_data["Totals"]["runtime"] = result_df[COLUMN_END].max()
-        meta_data["Totals"]["# instances"] = len(result_df)
-        meta_data["Totals"]["delta tFC"] = result_df[COLUMN_DELTA_FC].sum()
-        meta_data["Totals"]["delta tVM"] = result_df[COLUMN_DELTA_VM].sum()
+        totals["runtime"] = result_df[COLUMN_END].max()
+        totals["# instances"] = len(result_df)
+        totals["# max concurrent instances"] = max(conc_events)
+        totals["delta tFC"] = result_df[COLUMN_DELTA_FC].sum()
+        totals["delta tVM"] = result_df[COLUMN_DELTA_VM].sum()
 
-        meta_data["Statistics"]
+        stats["Mean delta tFC"] = result_df[COLUMN_DELTA_FC].mean()
+        stats["Mean delta tVM"] = result_df[COLUMN_DELTA_VM].mean()
+
+        meta_data["Totals"] = totals
+        meta_data["Statistics"] = stats
+
+        print(meta_data)
+ 
            
 
 if __name__ == "__main__":
-    process_data("./results/001")
+    # process_data("./results/001")
 
-    # arg_parser = argparse.ArgumentParser(description=_PROGRAM_DESCRIPTION_)
+    arg_parser = argparse.ArgumentParser(description=_PROGRAM_DESCRIPTION_)
 
-    # arg_parser.add_argument("directory", type=str, help="Directory containing the results")
-    # arg_parser.add_argument("-output", "-o", help="Write to the specified file")
+    arg_parser.add_argument("directory", type=str, help="Directory containing the results")
+    arg_parser.add_argument("-output", "-o", help="Write to the specified file")
 
-    # if len(sys.argv) < 2:
-    #     arg_parser.print_help()
-    #     exit(-1)
+    if len(sys.argv) < 2:
+        arg_parser.print_help()
+        exit(-1)
 
-    # args = arg_parser.parse_args()
+    args = arg_parser.parse_args()
 
-    # if args.directory:
-    #     process_data(args.directory)
+    if args.directory:
+        process_data(args.directory)

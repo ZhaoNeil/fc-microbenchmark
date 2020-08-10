@@ -1,3 +1,4 @@
+workloadID, workload argument, tFC, tVM, start time
 1,1,3844,13,1595701515
 2,10,4447,506,1595701516
 1,256,4057,0,1595701517
