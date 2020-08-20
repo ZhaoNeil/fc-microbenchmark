@@ -104,33 +104,4 @@ else
     echo "Found!"
 fi
 
-echo "Disabling SMT..."
-
-echo "d" | sudo ./scripts/toggleHT.sh
-
-echo "Setting CPU governor to performance"
-which cpupower > /dev/null
-
-if [[ $? -eq 0 ]]; then
-    sudo cpupower frequency-set -g performance
-fi
-
-echo "Disabling turbo-boost"
-arch="$(uname -m)"
-
-if [[ "$arch" == "x86_64" ]]; then
-    echo "1" | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
-
-elif [[ "$arch" == "aarch64" ]]; then
-    echo "0" | sudo tee /sys/devices/system/cpu/cpufreq/boost
-fi
-
-echo "Raising pid max..."
-
-echo "4194303" | sudo tee /proc/sys/kernel/pid_max
-
-echo "Raising user limits..."
-
-
-
 echo "You are ready to go!"

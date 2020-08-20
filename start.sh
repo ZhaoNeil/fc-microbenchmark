@@ -127,6 +127,10 @@ for opt in $(ulimit -a | sed 's/.*\-\([a-z]\)[^a-zA-Z].*$/\1/'); do
     ulimit -$opt unlimited 2> /dev/null
 done
 
+echo "Disabling SMT..."
+
+echo "d" | sudo ./scripts/toggleHT.sh
+
 if [[ $mode -eq 0 ]]; then
     #benchmark
     echo "Running benchmark..."
