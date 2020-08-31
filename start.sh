@@ -127,18 +127,18 @@ for opt in $(ulimit -a | sed 's/.*\-\([a-z]\)[^a-zA-Z].*$/\1/'); do
     ulimit -$opt unlimited 2> /dev/null
 done
 
-echo "Disabling SMT..."
+echo "Disabling SMT..." 1>&2
 
 echo "d" | sudo ./scripts/toggleHT.sh
 
-echo "Setting CPU governor to performance"
+echo "Setting CPU governor to performance" 1>&2
 which cpupower > /dev/null
 
 if [[ $? -eq 0 ]]; then
     sudo cpupower frequency-set -g performance
 fi
 
-echo "Disabling turbo-boost"
+echo "Disabling turbo-boost" 1>&2
 arch="$(uname -m)"
 
 if [[ "$arch" == "x86_64" ]]; then
@@ -148,11 +148,11 @@ elif [[ "$arch" == "aarch64" ]]; then
     echo "0" | sudo tee /sys/devices/system/cpu/cpufreq/boost
 fi
 
-echo "Raising pid max..."
+echo "Raising pid max..." 1>&2
 
 echo "4194303" | sudo tee /proc/sys/kernel/pid_max
 
-echo "Raising user limits..."
+echo "Raising user limits..." 1>&2
 
 if [[ $mode -eq 0 ]]; then
     #benchmark
