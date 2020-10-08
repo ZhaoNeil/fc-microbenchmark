@@ -1,33 +1,3 @@
----------------------------------------------------
-CPU's online: 0-15	 CPU's offline: 
----------------------------------------------------
-Disabling HyperThreading
-CPU: 0	-> enable
-CPU: 1	-> enable
-CPU: 10	-> disabled
-CPU: 11	-> disabled
-CPU: 12	-> disabled
-CPU: 13	-> disabled
-CPU: 14	-> disabled
-CPU: 15	-> disabled
-CPU: 2	-> enable
-CPU: 3	-> enable
-CPU: 4	-> enable
-CPU: 5	-> enable
-CPU: 6	-> enable
-CPU: 7	-> enable
-CPU: 8	-> disabled
-CPU: 9	-> disabled
-Setting cpu: 0
-Setting cpu: 1
-Setting cpu: 2
-Setting cpu: 3
-Setting cpu: 4
-Setting cpu: 5
-Setting cpu: 6
-Setting cpu: 7
-1
-4194303
 workloadID, workload argument, run, tFC, tVM
 0,1000000,0,4192,285
 0,1000000,1,4159,283

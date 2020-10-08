@@ -107,8 +107,8 @@ done
 
 #Determine the mode and whether it is valid
 if [[ ! " ${modes[@]} " =~ " $mode " ]]; then
-    echo "$mode is an invalid runmode."
-    echo "Use one of these: ${modes[@]}"
+    echo "$mode is an invalid runmode." 1>&2
+    echo "Use one of these: ${modes[@]}" 1>&2
     exit 1
 else
     idx=0
@@ -129,7 +129,7 @@ done
 
 echo "Disabling SMT..." 1>&2
 
-echo "d" | sudo ./scripts/toggleHT.sh
+echo "d" | sudo ./scripts/toggleHT.sh > /dev/null
 
 echo "Setting CPU governor to performance" 1>&2
 which cpupower > /dev/null
@@ -142,10 +142,15 @@ echo "Disabling turbo-boost" 1>&2
 arch="$(uname -m)"
 
 if [[ "$arch" == "x86_64" ]]; then
-    echo "1" | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
+
+    if [[ -e "/sys/devices/system/cpu/intel_pstate/no_turbo" ]]; then
+        echo "1" | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo > /dev/null
+    elif [[ -e "/sys/devices/system/cpu/cpufreq/boost" ]]; then
+        echo "0" | sudo tee /sys/devices/system/cpu/cpufreq/boost > /dev/null
+    fi
 
 elif [[ "$arch" == "aarch64" ]]; then
-    echo "0" | sudo tee /sys/devices/system/cpu/cpufreq/boost
+    echo "0" | sudo tee /sys/devices/system/cpu/cpufreq/boost > /dev/null
 fi
 
 echo "Raising pid max..." 1>&2
