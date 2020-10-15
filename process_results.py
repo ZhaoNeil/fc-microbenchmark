@@ -13,10 +13,11 @@
         - Create graphs
 """
 
-import pandas as pd
-import numpy as np
 import sys
 import argparse
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from os import path, listdir
 
 _PROGRAM_DESCRIPTION_ = """Process a folder containing results.
@@ -25,8 +26,12 @@ At least a file with baselines must be present, as well as one results set.
 
 """
 
-PARAMATER_DIR   = "./parameters"
+WORKLOAD_DIR   = "./workloads"
+RESULTS_PREFIX = "results-"
 BASELINE_FILENAME = "baseline.txt"
+BASELINES_FILENAME = "baselines.txt"
+HISTO_PREFIX = "histogram-"
+HISTO_EXT = ".png"
 #Header names
 COLUMN_WORKLOAD = "workloadID"
 COLUMN_ARGUMENT = "workload argument"
@@ -35,8 +40,32 @@ COLUMN_TIMEFC   = "tFC"
 COLUMN_TIMEVM   = "tVM"
 COLUMN_START    = "start time"
 COLUMN_END      = "end time"
+COLUMN_PREDICT_END = "pred. end time"
 COLUMN_DELTA_FC = "d tFC"
 COLUMN_DELTA_VM = "d tVM"
+
+def recursive_file_search(directory: str, list_filter = None) -> list:
+    """
+        Finds all files in a directory and its subdirectories.
+
+        If list_filter is defined, pass it to filter which is called on the list
+        before returning
+    """
+    sub_dirs = [path.abspath(directory), ]
+    all_files = []
+    #while sub_dirs: suffices, but I like being explicit
+    while len(sub_dirs) > 0:
+        sub = sub_dirs.pop(0)
+
+        sub_dirs = sub_dirs + [path.join(sub, d) for d in listdir(sub) if path.isdir(path.join(sub, d))]
+
+        all_files = all_files + [path.join(sub, f) for f in listdir(sub) 
+                                 if path.isfile(path.join(sub, f))]
+
+    if list_filter is not None:
+        return filter(list_filter, all_files)
+
+    return all_files
 
 def err(msg: str) -> None:
     """Print to stderr"""
@@ -50,7 +79,7 @@ def read_csv(filename: str) -> pd.DataFrame:
     if not path.isfile(filename):
         raise ValueError("{} is not a file, or does not exist".format(filename))
 
-    return pd.read_csv(filename, skipinitialspace=True)
+    return pd.read_csv(filename, skipinitialspace=True, comment="#")
 
 def calculate_baselines(baselines: pd.DataFrame) -> dict:
     if type(baselines) is not pd.DataFrame:
@@ -79,26 +108,68 @@ def calculate_baselines(baselines: pd.DataFrame) -> dict:
 
     return processed_baselines
 
-def calculate_average_baselines(directory: str) -> dict:
-    if not path.isdir(directory):
-        raise ValueError("{} is not a directory!".format(directory))
+def predict_workload_runtime(workload: str, baselines: dict) -> pd.DataFrame:
+    if path.isdir(workload):
+        raise NotImplementedError("Call predict_multiple_workloads for batch prediction!")
+    else:
+        workload = read_csv(workload)
 
-    sub_dirs = [directory, ]
+    if len(workload.columns) == 2:
+        start_col = [0 for i in len(workload)]
+        workload = workload.append(start_col)
+        del start_col
+
+    workload.rename(columns={0: COLUMN_WORKLOAD, 1: COLUMN_ARGUMENT, 2:COLUMN_START}, inplace=True)
+    #Quick access lambda for better readability, selects tFC
+    get_baseline = lambda idx: baselines.get(workload.iloc[idx, 0], {0: 0}).get(workload.iloc[idx, 1], [0, 0])[0]
+
+
+    #As the COLUMN_START now holds intervals between two instances, we have to
+    #shift the whole series by one, as the first instance starts at time 0
+    workload[COLUMN_START] = workload[COLUMN_START].shift(periods=1, fill_value=0)
+    
+    #End_times will be calculated in parallel to the starting times
+    end_times = [0 for i in range(0, len(workload))]
+    end_times[0] = get_baseline(0)
+
+    #Calculate starting points for each workload, rather than intervals
+    for i in range(1, len(workload)):
+        workload.loc[i, COLUMN_START] += workload[COLUMN_START][i-1]
+        #Add avg running time to the start time, use tFC (which is always the biggest number)
+        end_times[i] = round(workload.loc[i, COLUMN_START] * 1000) + get_baseline(i)
+                       
+
+    #All start-times to unfractioned millisecs
+    workload[COLUMN_START] = workload[COLUMN_START] * 1000
+    workload[COLUMN_START] = workload[COLUMN_START].astype("int32")
+
+    workload[COLUMN_PREDICT_END] = end_times
+
+
+    #Print some statistics to stderr (will also be appended to the dataframe)
+    err("Workload: {}".format(workload))
+    err("\tPredicted runtime = {}".format(workload[COLUMN_PREDICT_END].max()))
+    err("\t{}th instance determines runtime".format(workload[COLUMN_PREDICT_END].idxmax()))
+
+    workload[COLUMN_END] = workload[COLUMN_PREDICT_END]
+    max_conc_evt = concurrency_histogram(workload, 1000)
+
+    err("\tMaximal amount of concurrent instances: {}".format(max_conc_evt)) 
+
+    return workload
+
+def calculate_average_baselines(directory: str = "", files: list = []) -> dict:
     all_baselines = []
-
-    #while sub_dirs: suffices, but I like being explicit
-    while len(sub_dirs) > 0:
-        sub = sub_dirs.pop(0)
-
-        sub_dirs = sub_dirs + [path.join(sub, d) for d in listdir(sub) if path.isdir(path.join(sub, d))]
-
-        all_baselines = all_baselines + [path.join(sub, f) for f in listdir(sub) 
-                                 if path.isfile(path.join(sub, f))
-                                 and f == BASELINE_FILENAME]
+    if directory:
+        if not path.isdir(directory):
+            raise FileNotFoundError("{} is not a directory!".format(directory))
+        is_baseline_filter = lambda x: x == BASELINE_FILENAME or x == BASELINES_FILENAME
+        all_baselines = recursive_file_search(directory, list_filter=is_baseline_filter)
+    elif files:
+        all_baselines = files
 
     average_baselines = dict()
     counter = 0
-
     for f in all_baselines:
         counter += 1
         c = calculate_baselines(read_csv(f))
@@ -127,12 +198,12 @@ def calculate_average_baselines(directory: str) -> dict:
             }
 
 def max_concurrent_events(df: pd.DataFrame) -> int:
-    """Old function to calculate the maximal amount of concurrent events
+    """Finds the maximal number of concurrent events at a time slice.
     """
     total = len(df)
     max_count = 0
     i = 0
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         start_time  = row[COLUMN_START]
         end_time    = row[COLUMN_END]
 
@@ -157,15 +228,17 @@ def max_concurrent_events(df: pd.DataFrame) -> int:
 
     return max_count
 
-def concurrency_histogram(df: pd.DataFrame, bin_size=1) -> list:
+def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = "", bin_size=1000):
     """Given a processed dataframe, calculate the maximal number of concurrent 
-    jobs going on at a certain point in the runtime of the benchmark.
+    jobs going on in certain bins (histogram).
 
     Furthermore, a histogram can be plotted with the data returned by this 
     function
     
     :param df: The dataframe with start and end timestamps
     :type df: pd.DataFrame
+    :param output: Path to (not existing) file to which the histogram will be written
+    :type output: str
     :param bin_size: Bin size of the histogram in milliseconds
     :type bin_size: int
     :returns: A list with the bins
@@ -183,28 +256,32 @@ def concurrency_histogram(df: pd.DataFrame, bin_size=1) -> list:
     end_time = round(df[COLUMN_END].max())
 
     second_bins = [-1 for i in range(0, end_time, bin_size)]
-    check = second_bins.copy()
+    second_bins_pred = second_bins.copy()
+    seconds     = [i for i in range(0, end_time, bin_size)]
 
     for second in range(0, end_time, bin_size):
-        curr_second = 0
         bin_start = second
         bin_end = second + bin_size
-        #Naive approach
-        # for idx, row in df.iterrows():
-        #     if (row[COLUMN_END] > bin_start and row[COLUMN_END] <= bin_end) or (row[COLUMN_START] >= bin_start and row[COLUMN_START] < bin_end) or (bin_start >= row[COLUMN_START] and bin_end <= row[COLUMN_END]):
-        #         curr_second += 1
-        # #Do this here avoids repeatedly calculating the index
-        # second_bins[round(second / bin_size)] = curr_second
 
         #Panda-ized approach (probably faster)
         second_bins[round(second/bin_size)] = len(df[((df[COLUMN_END] > bin_start) & (df[COLUMN_END] <= bin_end)) | ((df[COLUMN_START] >= bin_start) & (df[COLUMN_START] < bin_end)) | ((bin_start >= df[COLUMN_START]) & (bin_end <= df[COLUMN_END]))])
+        if df_pred:
+            second_bins_pred[round(second/bin_size)] = len(df_pred[((df_pred[COLUMN_END] > bin_start) & (df_pred[COLUMN_END] <= bin_end)) | ((df_pred[COLUMN_START] >= bin_start) & (df_pred[COLUMN_START] < bin_end)) | ((bin_start >= df_pred[COLUMN_START]) & (bin_end <= df_pred[COLUMN_END]))])
 
 
         print("\r{}/{} seconds processed.".format(second, end_time), file=sys.stderr, end="")
 
-    err("")
+    
+    if output:
+        plt.hist(seconds, len(seconds), weight=second_bins, label="Result")
+        if df_pred:
+            plt.hist(seconds, len(seconds), weight=second_bins_pred, label="Prediction")
+            plt.legend(loc="upper right")
+        plt.xlabel("seconds")
+        plt.ylabel("# instances")
+        plt.savefig(output)
 
-    return second_bins
+    return second_bins, second_bins_pred
 
 def calculate_deltas(df: pd.DataFrame, baselines: dict) -> pd.DataFrame:
     if type(df) is not pd.DataFrame or type(baselines) is not dict:
@@ -232,97 +309,148 @@ def calculate_deltas(df: pd.DataFrame, baselines: dict) -> pd.DataFrame:
 
     return df
 
-def process_data(directory: str) -> None:
-    if not path.isdir(directory):
-        err("{} is not a directory!".format(directory))
-        return
+def process_file(filename: str, baselines: dict) -> pd.DataFrame:
+    """
+        Processes a single file and write the results to another file.
+        This file will have the systematic name "processed_{filename}"
+    """
+    if not path.isfile(filename):
+        raise FileNotFoundError("File {} does not exist!".format(filename))
 
+    write_to_name = "processed-{}".format(path.basename(filename))
+
+    ### Read the CSV and perform some data transformations
+    result_df = read_csv(filename)
+
+    #Sort on starting time and subtract the initial time
+    result_df.sort_values(by=COLUMN_START, inplace=True)
+    start_time = result_df[COLUMN_START].min()
+    result_df[COLUMN_START] = result_df[COLUMN_START] - start_time
+
+    result_df = calculate_deltas(result_df, baselines)
+
+
+    ### Calculate some meta-data
+
+    to_write = []
+
+    to_write.append(("Total time", result_df[COLUMN_END].max()))
+    to_write.append(("No. instances", len(result_df)))
+    to_write.append(("Max. concurrent events", max_concurrent_events(result_df)))
+    to_write.append(("Sum of delta tFC", result_df[COLUMN_DELTA_FC].sum()))
+    to_write.append(("Sum of delta tVM", result_df[COLUMN_DELTA_VM].sum()))
+    to_write.append(("Mean of delta tFC", result_df[COLUMN_DELTA_FC].mean()))
+    to_write.append(("Mean of delta tVM", result_df[COLUMN_DELTA_VM].mean()))
+
+    with open(write_to_name, "w") as f:
+        for t in to_write:
+            f.write("# {}: {}".format(t[0], t[1]))
+
+    #Append the processed df to the file
+    result_df.to_csv(path.join(path.split(filename)[0], write_to_name), mode="a", index=False)
+
+    return result_df
+
+def process_data(directory: str) -> None:
+    """
+        Gather all files in a directory and its subdirectories and process these
+        result files. It is advisable to call this function per directory that 
+        contains data from multiple machines/experiments. For example, a 
+        directory that contains all experiments for the CFS scheduler.
+    """
+    if not path.isdir(directory):
+        raise FileNotFoundError("Directory {} does not exist!".format(directory))
+
+    # Gather all files from this directory
     directory = path.abspath(directory)
 
+    all_files = recursive_file_search(directory)
 
-    #Get a list of all files in the directory
-    dir_files = [f for f in listdir(directory) if path.isfile(path.join(directory, f))]
+    all_files = [path.split(f) for f in all_files]
+    files_per_dir = {}
 
-    #Check if there are any results and a baseline file
-    has_results = False
-    has_baseline = False
-    for f in dir_files[:]:
-        #Stop checking if at least one result and a baseline
-        if has_results and has_baseline:
-            break
+    for f in all_files:
+        files_per_dir.setdefault(f[0], []).append(f[1])
 
-        if f.startswith("results"):
-            has_results = True
+    baselines_per_dir = {}
+    #Dict comprehension?
+    for d, baselines in files_per_dir.items():
+        for baseline in baselines: 
+            if baseline == "baseline.txt" or baseline == "baselines.txt":
+                baselines_per_dir[d] = baseline
 
-        if f == BASELINE_FILENAME:
-            has_baseline = True
-            dir_files.remove(f)
+    #Ensure no dirs without results or baselines are processed
+    keys_baselines_per_dir = set(baselines_per_dir.keys())
+    keys_files_per_dir = set(files_per_dir.keys())
+    diff = keys_baselines_per_dir ^ keys_files_per_dir
 
-    if not has_baseline:
-        err("The directory does not contain a {} file.".format(BASELINE_FILENAME))
-        return
-    if not has_results:
-        err("The directory does not contain at least one result.")
-        return
+    for d in diff:
+        err("{} omitted, no baselines/results found!".format(d))
+        if d in baselines_per_dir:
+            del baselines_per_dir[d]
+        if d in files_per_dir:
+            del files_per_dir[d]
 
-    #Calculate the baselines for later use
-    baselines = calculate_baselines(read_csv(path.join(directory, BASELINE_FILENAME)))
 
-    processed_files = 0
-    to_process = len(dir_files)
+    #Calculate this once, as we're gonna use this for the predictions
+    err("Calculating average baselines...")
+    avg_baselines = calculate_average_baselines(files=[path.join(key, value) for key, value in baselines_per_dir.items()])
 
-    for result_file in dir_files:
-        processed_files += 1
-        err("{}/{}: Processing {}".format(processed_files, to_process, result_file))
-        #Result files are automatically named after the arguments file with
-        #results added as prefix
-        if not result_file.startswith("results"):
-            err("Skipping file {}".format(result_file))
-            continue
+    err("Determining bin size by picking smallest value for primenumber baselines...")
+    bin_size = avg_baselines.get(0, {})
+    bin_size = max(bin_size.get(min(bin_size.keys()), []))
+    err("Picked bin_size = {}".format(bin_size))
 
-        ### Read the CSV and perform some data transformations
+    #Pre-calculate all the baselines
+    for d, baseline in baselines_per_dir.items():
+        baselines_per_dir[d] = calculate_baselines(read_csv(path.join(d, baseline)))
 
-        result_df = read_csv(path.join(directory, result_file))
+    err("Starting predictions per workload...")
+    #Scheme: workload: prediction_df
+    predictions = {}
+    #Calculate all predictions
+    for d, files in files_per_dir.items():
+        for f in files:
+            workload_name = path.basename(f)
+            basename = workload_name
+            #Skip work done
+            if workload_name in predictions:
+                continue
 
-        #Sort on starting time and subtract the initial time
-        result_df.sort_values(by=COLUMN_START, inplace=True)
-        start_time = result_df[COLUMN_START].min()
-        result_df[COLUMN_START] = result_df[COLUMN_START] - start_time
+            if workload_name.startswith(RESULTS_PREFIX):
+                workload_name = workload_name[len(RESULTS_PREFIX):]
+                workload_name = path.join(WORKLOAD_DIR, workload_name)
 
-        result_df = calculate_deltas(result_df, baselines)
+                if path.isfile(workload_name):
+                    err("Calculating predictions for {}".format(basename))
+                    predictions[basename] = predict_workload_runtime(workload_name, avg_baselines)
+                else:
+                    err("Workload file {} does not exist, where it should?".format(workload_name))
 
-        result_df.to_csv(path.join(directory, "processed-{}".format(result_file)), index=False)
+    #Process all the files
+    err("Starting processing of results...")
+    for d, files in files_per_dir.items():
+        for f in files:
+            #Perhaps delete these baselines somewhere above? As we've already processed them
+            if f == BASELINE_FILENAME or f == BASELINES_FILENAME:
+                continue
 
-        ### Calculate some meta-data and save it as well
+            err("Processing {}...".format(path.join(d,f)))
+            workload_name = f[len(RESULTS_PREFIX):]
+            preds = predictions.get(workload_name, None)
+            proc_df = process_file(path.join(d, f), baselines_per_dir[d])
 
-        conc_events = concurrency_histogram(result_df)
-        meta_data = {}
-        totals = {}
-        stats = {}
+            histo_name = HISTO_PREFIX + path.splitext(f)[0] + HISTO_FORMAT
+            # Save the bins to avoid extra work in case of rerender of histo?
+            _, _ = concurrency_histogram(df=proc_df, df_pred=preds, output=path.join(d, histo_name), bin_size=bin_size)
 
-        totals["runtime"] = result_df[COLUMN_END].max()
-        totals["# instances"] = len(result_df)
-        totals["# max concurrent instances"] = max(conc_events)
-        totals["delta tFC"] = result_df[COLUMN_DELTA_FC].sum()
-        totals["delta tVM"] = result_df[COLUMN_DELTA_VM].sum()
 
-        stats["Mean delta tFC"] = result_df[COLUMN_DELTA_FC].mean()
-        stats["Mean delta tVM"] = result_df[COLUMN_DELTA_VM].mean()
 
-        meta_data["Totals"] = totals
-        meta_data["Statistics"] = stats
-
-        print(meta_data)
- 
-           
 
 if __name__ == "__main__":
-    # process_data("./results/001")
-
     arg_parser = argparse.ArgumentParser(description=_PROGRAM_DESCRIPTION_)
 
-    arg_parser.add_argument("directory", type=str, help="Directory containing the results")
-    arg_parser.add_argument("-output", "-o", help="Write to the specified file")
+    arg_parser.add_argument("directory", type=str, help="Directory containing the results per scheduler")
 
     if len(sys.argv) < 2:
         arg_parser.print_help()
