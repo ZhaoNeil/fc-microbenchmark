@@ -108,11 +108,12 @@ def calculate_baselines(baselines: pd.DataFrame) -> dict:
 
     return processed_baselines
 
-def predict_workload_runtime(workload: str, baselines: dict) -> pd.DataFrame:
-    if path.isdir(workload):
-        raise NotImplementedError("Call predict_multiple_workloads for batch prediction!")
+def predict_workload_runtime(filepath: str, baselines: dict, write_dir: str = "") -> pd.DataFrame:
+    workload = None
+    if path.isdir(filepath):
+        raise NotImplementedError("workload must point to a file, not a directory!")
     else:
-        workload = read_csv(workload)
+        workload = pd.read_csv(filepath, header=None, skipinitialspace=True)
 
     if len(workload.columns) == 2:
         start_col = [0 for i in len(workload)]
@@ -145,16 +146,17 @@ def predict_workload_runtime(workload: str, baselines: dict) -> pd.DataFrame:
 
     workload[COLUMN_PREDICT_END] = end_times
 
-
-    #Print some statistics to stderr (will also be appended to the dataframe)
-    err("Workload: {}".format(workload))
-    err("\tPredicted runtime = {}".format(workload[COLUMN_PREDICT_END].max()))
-    err("\t{}th instance determines runtime".format(workload[COLUMN_PREDICT_END].idxmax()))
-
     workload[COLUMN_END] = workload[COLUMN_PREDICT_END]
-    max_conc_evt = concurrency_histogram(workload, 1000)
 
-    err("\tMaximal amount of concurrent instances: {}".format(max_conc_evt)) 
+    if write_dir:
+        output_name = path.join(write_dir, "predictions-" + path.basename(filepath))
+
+        with open(output_name, "w") as f:
+            f.write("Workload: {} \n".format(path.basename(filepath)))
+            f.write("\tPredicted runtime = {} \n".format(workload[COLUMN_PREDICT_END].max()))
+            f.write("\t{}th instance determines runtime \n".format(workload[COLUMN_PREDICT_END].idxmax()))
+            f.write("\t{} is maximal amount of concurrent events \n".format(max_concurrent_events(workload)))
+
 
     return workload
 
@@ -202,7 +204,7 @@ def max_concurrent_events(df: pd.DataFrame) -> int:
     """
     total = len(df)
     max_count = 0
-    i = 0
+    i = 1
     for _, row in df.iterrows():
         start_time  = row[COLUMN_START]
         end_time    = row[COLUMN_END]
@@ -252,7 +254,7 @@ def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = 
 
     err("Calculating max. concurrent instances...")
 
-   
+    has_predictions = type(df_pred) == type(pd.DataFrame())
     end_time = round(df[COLUMN_END].max())
 
     second_bins = [-1 for i in range(0, end_time, bin_size)]
@@ -265,7 +267,7 @@ def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = 
 
         #Panda-ized approach (probably faster)
         second_bins[round(second/bin_size)] = len(df[((df[COLUMN_END] > bin_start) & (df[COLUMN_END] <= bin_end)) | ((df[COLUMN_START] >= bin_start) & (df[COLUMN_START] < bin_end)) | ((bin_start >= df[COLUMN_START]) & (bin_end <= df[COLUMN_END]))])
-        if df_pred:
+        if has_predictions:
             second_bins_pred[round(second/bin_size)] = len(df_pred[((df_pred[COLUMN_END] > bin_start) & (df_pred[COLUMN_END] <= bin_end)) | ((df_pred[COLUMN_START] >= bin_start) & (df_pred[COLUMN_START] < bin_end)) | ((bin_start >= df_pred[COLUMN_START]) & (bin_end <= df_pred[COLUMN_END]))])
 
 
@@ -273,13 +275,14 @@ def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = 
 
     
     if output:
-        plt.hist(seconds, len(seconds), weight=second_bins, label="Result")
-        if df_pred:
-            plt.hist(seconds, len(seconds), weight=second_bins_pred, label="Prediction")
+        plt.hist(seconds, len(seconds), weights=second_bins, alpha=0.5, label="Result")
+        if has_predictions:
+            plt.hist(seconds, len(seconds), weights=second_bins_pred, alpha=0.5, label="Prediction")
             plt.legend(loc="upper right")
         plt.xlabel("seconds")
         plt.ylabel("# instances")
         plt.savefig(output)
+        plt.clf()
 
     return second_bins, second_bins_pred
 
@@ -318,6 +321,7 @@ def process_file(filename: str, baselines: dict) -> pd.DataFrame:
         raise FileNotFoundError("File {} does not exist!".format(filename))
 
     write_to_name = "processed-{}".format(path.basename(filename))
+    write_to_name = path.join(path.split(filename)[0], write_to_name)
 
     ### Read the CSV and perform some data transformations
     result_df = read_csv(filename)
@@ -344,7 +348,7 @@ def process_file(filename: str, baselines: dict) -> pd.DataFrame:
 
     with open(write_to_name, "w") as f:
         for t in to_write:
-            f.write("# {}: {}".format(t[0], t[1]))
+            f.write("# {}: {} \n".format(t[0], t[1]))
 
     #Append the processed df to the file
     result_df.to_csv(path.join(path.split(filename)[0], write_to_name), mode="a", index=False)
@@ -412,20 +416,22 @@ def process_data(directory: str) -> None:
     for d, files in files_per_dir.items():
         for f in files:
             workload_name = path.basename(f)
-            basename = workload_name
-            #Skip work done
-            if workload_name in predictions:
-                continue
-
             if workload_name.startswith(RESULTS_PREFIX):
                 workload_name = workload_name[len(RESULTS_PREFIX):]
-                workload_name = path.join(WORKLOAD_DIR, workload_name)
 
-                if path.isfile(workload_name):
-                    err("Calculating predictions for {}".format(basename))
-                    predictions[basename] = predict_workload_runtime(workload_name, avg_baselines)
-                else:
-                    err("Workload file {} does not exist, where it should?".format(workload_name))
+            basename = workload_name
+            workload_name = path.abspath(path.join(WORKLOAD_DIR, workload_name))
+            #Skip work done
+            if basename in predictions:
+                continue
+
+
+            if path.isfile(workload_name):
+                err("Calculating predictions for {}".format(workload_name))
+                predictions[basename] = predict_workload_runtime(workload_name, avg_baselines, directory)
+
+            else:
+                err("Workload file {} does not exist, where it should?".format(workload_name))
 
     #Process all the files
     err("Starting processing of results...")
@@ -440,7 +446,7 @@ def process_data(directory: str) -> None:
             preds = predictions.get(workload_name, None)
             proc_df = process_file(path.join(d, f), baselines_per_dir[d])
 
-            histo_name = HISTO_PREFIX + path.splitext(f)[0] + HISTO_FORMAT
+            histo_name = HISTO_PREFIX + path.splitext(f)[0] + HISTO_EXT
             # Save the bins to avoid extra work in case of rerender of histo?
             _, _ = concurrency_histogram(df=proc_df, df_pred=preds, output=path.join(d, histo_name), bin_size=bin_size)
 
