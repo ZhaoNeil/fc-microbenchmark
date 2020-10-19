@@ -6,3 +6,6 @@ fs
 *.lock
 get-pip.py
 *__pycache__*
+predictions*
+histogram*
+processed*
