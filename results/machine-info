@@ -1,0 +1,17 @@
+All directories with naming scheme xxx with x in {0, ..., 9}:
+    Linux kernel version: 4.15.0-101-generic
+    Distribution: Ubuntu 18.04
+    Bash version: 4.4.19
+    Specs:
+        CPU 8-core Intel Xeon D-1548 @ 2.0GHz
+        RAM 64GB ECC (4x 16GB DDR4-2133 SO-DIMM)
+        Disk 256GB NVMe flash
+
+All directories with naming scheme apolloxxx with x in {0, ... 9}:
+    Linux kernel version: 
+    Distribution:
+    Bash version:
+    Specs:
+        CPU
+        RAM
+        Disk

@@ -28,6 +28,7 @@ At least a file with baselines must be present, as well as one results set.
 
 WORKLOAD_DIR   = "./workloads"
 RESULTS_PREFIX = "results-"
+RESULTS_EXT = ".txt"
 BASELINE_FILENAME = "baseline.txt"
 BASELINES_FILENAME = "baselines.txt"
 HISTO_PREFIX = "histogram-"
@@ -156,7 +157,8 @@ def predict_workload_runtime(filepath: str, baselines: dict, write_dir: str = ""
             f.write("\tPredicted runtime = {} \n".format(workload[COLUMN_PREDICT_END].max()))
             f.write("\t{}th instance determines runtime \n".format(workload[COLUMN_PREDICT_END].idxmax()))
             f.write("\t{} is maximal amount of concurrent events \n".format(max_concurrent_events(workload)))
-
+        
+        workload.to_csv(output_name, mode="a", index=False)
 
     return workload
 
@@ -230,7 +232,7 @@ def max_concurrent_events(df: pd.DataFrame) -> int:
 
     return max_count
 
-def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = "", bin_size=1000):
+def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = "", title:str = "", bin_size=1000):
     """Given a processed dataframe, calculate the maximal number of concurrent 
     jobs going on in certain bins (histogram).
 
@@ -273,7 +275,7 @@ def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = 
 
         print("\r{}/{} seconds processed.".format(second, end_time), file=sys.stderr, end="")
 
-    
+    err("")
     if output:
         plt.hist(seconds, len(seconds), weights=second_bins, alpha=0.5, label="Result")
         if has_predictions:
@@ -281,6 +283,7 @@ def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = 
             plt.legend(loc="upper right")
         plt.xlabel("seconds")
         plt.ylabel("# instances")
+        plt.title(title)
         plt.savefig(output)
         plt.clf()
 
@@ -312,7 +315,7 @@ def calculate_deltas(df: pd.DataFrame, baselines: dict) -> pd.DataFrame:
 
     return df
 
-def process_file(filename: str, baselines: dict) -> pd.DataFrame:
+def process_file(filename: str, baselines: dict, output=True) -> pd.DataFrame:
     """
         Processes a single file and write the results to another file.
         This file will have the systematic name "processed_{filename}"
@@ -329,29 +332,32 @@ def process_file(filename: str, baselines: dict) -> pd.DataFrame:
     #Sort on starting time and subtract the initial time
     result_df.sort_values(by=COLUMN_START, inplace=True)
     start_time = result_df[COLUMN_START].min()
-    result_df[COLUMN_START] = result_df[COLUMN_START] - start_time
+    result_df[COLUMN_START] = (result_df[COLUMN_START] - start_time) * 1000
+
+    #Perform some datacleansing here
+    # result_df = result_df[]
 
     result_df = calculate_deltas(result_df, baselines)
 
 
     ### Calculate some meta-data
+    if output:
+        to_write = []
 
-    to_write = []
+        to_write.append(("Total time", result_df[COLUMN_END].max()))
+        to_write.append(("No. instances", len(result_df)))
+        to_write.append(("Max. concurrent events", max_concurrent_events(result_df)))
+        to_write.append(("Sum of delta tFC", result_df[COLUMN_DELTA_FC].sum()))
+        to_write.append(("Sum of delta tVM", result_df[COLUMN_DELTA_VM].sum()))
+        to_write.append(("Mean of delta tFC", result_df[COLUMN_DELTA_FC].mean()))
+        to_write.append(("Mean of delta tVM", result_df[COLUMN_DELTA_VM].mean()))
 
-    to_write.append(("Total time", result_df[COLUMN_END].max()))
-    to_write.append(("No. instances", len(result_df)))
-    to_write.append(("Max. concurrent events", max_concurrent_events(result_df)))
-    to_write.append(("Sum of delta tFC", result_df[COLUMN_DELTA_FC].sum()))
-    to_write.append(("Sum of delta tVM", result_df[COLUMN_DELTA_VM].sum()))
-    to_write.append(("Mean of delta tFC", result_df[COLUMN_DELTA_FC].mean()))
-    to_write.append(("Mean of delta tVM", result_df[COLUMN_DELTA_VM].mean()))
+        with open(write_to_name, "w") as f:
+            for t in to_write:
+                f.write("# {}: {} \n".format(t[0], t[1]))
 
-    with open(write_to_name, "w") as f:
-        for t in to_write:
-            f.write("# {}: {} \n".format(t[0], t[1]))
-
-    #Append the processed df to the file
-    result_df.to_csv(path.join(path.split(filename)[0], write_to_name), mode="a", index=False)
+        #Append the processed df to the file
+        result_df.to_csv(path.join(path.split(filename)[0], write_to_name), mode="a", index=False)
 
     return result_df
 
@@ -400,9 +406,10 @@ def process_data(directory: str) -> None:
     err("Calculating average baselines...")
     avg_baselines = calculate_average_baselines(files=[path.join(key, value) for key, value in baselines_per_dir.items()])
 
-    err("Determining bin size by picking smallest value for primenumber baselines...")
-    bin_size = avg_baselines.get(0, {})
-    bin_size = max(bin_size.get(min(bin_size.keys()), []))
+    # err("Determining bin size by picking smallest value for primenumber baselines...")
+    # bin_size = avg_baselines.get(0, {})
+    # bin_size = max(bin_size.get(max(bin_size.keys()), []))
+    bin_size = 20000 #20sec
     err("Picked bin_size = {}".format(bin_size))
 
     #Pre-calculate all the baselines
@@ -421,9 +428,11 @@ def process_data(directory: str) -> None:
 
             basename = workload_name
             workload_name = path.abspath(path.join(WORKLOAD_DIR, workload_name))
-            #Skip work done
-            if basename in predictions:
+            #baseline(s).txt should not be processed
+            if basename == BASELINE_FILENAME or basename == BASELINES_FILENAME \
+               or basename in predictions:
                 continue
+
 
 
             if path.isfile(workload_name):
@@ -438,7 +447,8 @@ def process_data(directory: str) -> None:
     for d, files in files_per_dir.items():
         for f in files:
             #Perhaps delete these baselines somewhere above? As we've already processed them
-            if f == BASELINE_FILENAME or f == BASELINES_FILENAME:
+            if f == BASELINE_FILENAME or f == BASELINES_FILENAME or \
+                not f.endswith(RESULTS_EXT) or not f.startswith(RESULTS_PREFIX):
                 continue
 
             err("Processing {}...".format(path.join(d,f)))
@@ -446,9 +456,14 @@ def process_data(directory: str) -> None:
             preds = predictions.get(workload_name, None)
             proc_df = process_file(path.join(d, f), baselines_per_dir[d])
 
+            prefix_start = d.find("results")
+            if prefix_start < 0:
+                prefix_start = 0
+            
+            histo_title = d[prefix_start:].replace("/", " ")
             histo_name = HISTO_PREFIX + path.splitext(f)[0] + HISTO_EXT
             # Save the bins to avoid extra work in case of rerender of histo?
-            _, _ = concurrency_histogram(df=proc_df, df_pred=preds, output=path.join(d, histo_name), bin_size=bin_size)
+            _, _ = concurrency_histogram(df=proc_df, df_pred=preds, output=path.join(d, histo_name), title=histo_title, bin_size=bin_size)
 
 
 
