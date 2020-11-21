@@ -15,6 +15,7 @@
 
 import sys
 import argparse
+import math
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,6 +30,8 @@ At least a file with baselines must be present, as well as one results set.
 WORKLOAD_DIR   = "./workloads"
 RESULTS_PREFIX = "results-"
 RESULTS_EXT = ".txt"
+SYSMON_RESULTS_PREFIX = "sysmon-"
+SYSMON_EXT = ".txt"
 BASELINE_FILENAME = "baseline.txt"
 BASELINES_FILENAME = "baselines.txt"
 HISTO_PREFIX = "histogram-"
@@ -83,6 +86,16 @@ def read_csv(filename: str) -> pd.DataFrame:
     return pd.read_csv(filename, skipinitialspace=True, comment="#")
 
 def calculate_baselines(baselines: pd.DataFrame) -> dict:
+    """
+    Read a file that contains multiple runs of the same pair. The format of the
+    file must be:
+
+    workload id, workload argument, run number, tFC, tVM
+
+    This function calculates the average over all runs of each unique pair of
+    workload id and workload argument.
+
+    """
     if type(baselines) is not pd.DataFrame:
         raise TypeError("calculate_baselines: invalid object type passed.")
 
@@ -110,6 +123,15 @@ def calculate_baselines(baselines: pd.DataFrame) -> dict:
     return processed_baselines
 
 def predict_workload_runtime(filepath: str, baselines: dict, write_dir: str = "") -> pd.DataFrame:
+    """
+    Predict how long a workload *should* take when run on an ideal system, so
+    with inf. CPUs, perfect multitasking etc.
+
+    For this, it needs baseline measurements and a path to the workload.
+
+    This function does *NOT* work for non-Poisson workloads, as these would 
+    always finish when the slowest task in the workload finishes.
+    """
     workload = None
     if path.isdir(filepath):
         raise NotImplementedError("workload must point to a file, not a directory!")
@@ -163,6 +185,12 @@ def predict_workload_runtime(filepath: str, baselines: dict, write_dir: str = ""
     return workload
 
 def calculate_average_baselines(directory: str = "", files: list = []) -> dict:
+    """
+    Calculate the average baselines over multiple baseline files.
+
+    Calls calculate_baselines on each file. Afterwards, it calculates the
+    average values over all files.
+    """
     all_baselines = []
     if directory:
         if not path.isdir(directory):
@@ -202,7 +230,8 @@ def calculate_average_baselines(directory: str = "", files: list = []) -> dict:
             }
 
 def max_concurrent_events(df: pd.DataFrame) -> int:
-    """Finds the maximal number of concurrent events at a time slice.
+    """
+    Finds the maximal number of concurrent events at a time slice.
     """
     total = len(df)
     max_count = 0
@@ -284,7 +313,7 @@ def concurrency_histogram(df: pd.DataFrame, df_pred: pd.DataFrame, output:str = 
         plt.xlabel("seconds")
         plt.ylabel("# instances")
         plt.title(title)
-        plt.savefig(output)
+        plt.savefig(output, dpi=1000)
         plt.clf()
 
     return second_bins, second_bins_pred
@@ -361,12 +390,80 @@ def process_file(filename: str, baselines: dict, output=True) -> pd.DataFrame:
 
     return result_df
 
+def sysmon_graphs(df: pd.DataFrame, title: str = "sysmon output", output: str = "sysmon.png", total_mem: int = -1) -> None:
+    """
+    Create graphs with the metrics output by the system monitor.
+
+    For now: simple line graphs
+    """
+    #Process the following columns
+    process_cols = ["t", "cpu_user", "cpu_system", "cpu_idle", "cpu_inter"]
+
+    for pcol in process_cols:
+        if pcol not in df:
+            continue
+
+        df[pcol] = df[pcol] - df[pcol][0]
+
+    nrows = len(df.columns) - len(process_cols)
+    ncols = 1
+    idx = 1
+
+    if "swap_used" in df:
+        if df["swap_used"].max() == 0 and df["swap_used"].max() == df["swap_used"].min():
+            df = df.drop("swap_used", axis=1)
+
+    print(f"total_mem = {total_mem} other = {df.mem_avail[0]}")
+
+    #Make percentages of available memory if possible
+    if total_mem > 0 and "mem_avail" in df:
+        df.mem_avail = (df.mem_avail / total_mem) * 100
+
+    
+    #Keep track whether we saw one of the process_plots already
+    #as we're gonna plot these all in the same plot
+    process_col_one = True
+
+    #Do not need the 't' column to be in df
+    x_axis = df.t
+    df = df.drop(df.t.name, axis=1)
+    list_ax = []
+    subplot_args = {}
+
+
+    for col in df.columns:
+        if idx > 1:
+            subplot_args["sharex"] = list_ax[0]
+
+        if col not in process_cols or process_col_one:
+            ax = plt.subplot(nrows, ncols, idx, **subplot_args)
+            list_ax.append(ax)
+            process_col_one = False
+            idx += 1
+        else:
+            plt.ylabel("time (s)")
+            
+        list_ax[-1].plot(x_axis, df[col], ",--", label=col)
+        list_ax[-1].legend(loc="upper right")
+        plt.xlabel("time (s)")
+
+        if col == "mem_avail":
+            plt.ylabel("Percentage available")
+
+
+    plt.suptitle(title)
+    # plt.show()
+    plt.savefig(output, dpi=1000)
+    plt.clf()
+
+
+
 def process_data(directory: str) -> None:
     """
-        Gather all files in a directory and its subdirectories and process these
-        result files. It is advisable to call this function per directory that 
-        contains data from multiple machines/experiments. For example, a 
-        directory that contains all experiments for the CFS scheduler.
+    Gather all files in a directory and its subdirectories and process these
+    result files. It is advisable to call this function per directory that 
+    contains data from multiple machines/experiments. For example, a directory 
+    that contains all experiments for the CFS scheduler.
     """
     if not path.isdir(directory):
         raise FileNotFoundError("Directory {} does not exist!".format(directory))
@@ -386,7 +483,7 @@ def process_data(directory: str) -> None:
     #Dict comprehension?
     for d, baselines in files_per_dir.items():
         for baseline in baselines: 
-            if baseline == "baseline.txt" or baseline == "baselines.txt":
+            if baseline == BASELINE_FILENAME or baseline == BASELINES_FILENAME:
                 baselines_per_dir[d] = baseline
 
     #Ensure no dirs without results or baselines are processed
@@ -426,44 +523,66 @@ def process_data(directory: str) -> None:
             if workload_name.startswith(RESULTS_PREFIX):
                 workload_name = workload_name[len(RESULTS_PREFIX):]
 
-            basename = workload_name
-            workload_name = path.abspath(path.join(WORKLOAD_DIR, workload_name))
-            #baseline(s).txt should not be processed
-            if basename == BASELINE_FILENAME or basename == BASELINES_FILENAME \
-               or basename in predictions:
-                continue
 
+                basename = workload_name
+                workload_name = path.abspath(path.join(WORKLOAD_DIR, workload_name))
 
+                if path.isfile(workload_name):
+                    err("Calculating predictions for {}".format(workload_name))
+                    predictions[basename] = predict_workload_runtime(workload_name, avg_baselines, directory)
 
-            if path.isfile(workload_name):
-                err("Calculating predictions for {}".format(workload_name))
-                predictions[basename] = predict_workload_runtime(workload_name, avg_baselines, directory)
-
+                else:
+                    err("Workload file {} does not exist, where it should?".format(workload_name))
             else:
-                err("Workload file {} does not exist, where it should?".format(workload_name))
+                #Unsupported file
+                err(f"Skipping file {workload_name}")
 
     #Process all the files
     err("Starting processing of results...")
     for d, files in files_per_dir.items():
         for f in files:
-            #Perhaps delete these baselines somewhere above? As we've already processed them
-            if f == BASELINE_FILENAME or f == BASELINES_FILENAME or \
-                not f.endswith(RESULTS_EXT) or not f.startswith(RESULTS_PREFIX):
-                continue
+            if f.endswith(RESULTS_EXT) and f.startswith(RESULTS_PREFIX):
+                #Process the results and create graphs
+                err("Processing {}...".format(path.join(d,f)))
+                #Cut-off the prefix, as this is the key for predictions
+                workload_name = f[len(RESULTS_PREFIX):]
+                preds = predictions.get(workload_name, None)
+                #Process the results and write them to a file + store in variable
+                proc_df = process_file(path.join(d, f), baselines_per_dir[d])
 
-            err("Processing {}...".format(path.join(d,f)))
-            workload_name = f[len(RESULTS_PREFIX):]
-            preds = predictions.get(workload_name, None)
-            proc_df = process_file(path.join(d, f), baselines_per_dir[d])
 
-            prefix_start = d.find("results")
-            if prefix_start < 0:
-                prefix_start = 0
-            
-            histo_title = d[prefix_start:].replace("/", " ")
-            histo_name = HISTO_PREFIX + path.splitext(f)[0] + HISTO_EXT
-            # Save the bins to avoid extra work in case of rerender of histo?
-            _, _ = concurrency_histogram(df=proc_df, df_pred=preds, output=path.join(d, histo_name), title=histo_title, bin_size=bin_size)
+                prefix_start = d.find("results")
+                if prefix_start < 0:
+                    prefix_start = 0
+                
+                #Transform path to a nice readable title
+                histo_title = d[prefix_start+len("results"):].replace("/", " ")
+                histo_name = HISTO_PREFIX + path.splitext(f)[0] + HISTO_EXT
+                # Save the bins to avoid extra work in case of rerender of histo?
+                _, _ = concurrency_histogram(df=proc_df, df_pred=preds, output=path.join(d, histo_name), title=histo_title, bin_size=bin_size)
+            elif f.startswith(SYSMON_RESULTS_PREFIX) and f.endswith(SYSMON_EXT):
+                #Create some graphs of the sysmon results and store these 
+                #as a file as well
+                err(f"Processing system monitor results {path.join(d,f)}")
+
+                cpu_count = -1
+                total_mem = -1
+
+                with open(path.join(d,f), "r") as sysfile:
+                    cpu_count = sysfile.readline()
+                    total_mem = sysfile.readline()
+
+                if "total_mem" in total_mem:
+                    total_mem = [int(s) for s in total_mem.split() if s.isdigit()]
+                    total_mem = total_mem[0]
+
+                sysmon_df = read_csv(path.join(d, f))
+
+                graph_output = path.join(d, path.splitext(f)[0] + ".png")
+                graph_title = "System usage " + f[len(SYSMON_RESULTS_PREFIX):]
+
+                sysmon_graphs(sysmon_df, title=graph_title, output=graph_output, total_mem=total_mem)
+
 
 
 

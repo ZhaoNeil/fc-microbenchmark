@@ -8,7 +8,7 @@ fsLoc="${2:-"$myLoc/../resources/rootfs.ext4"}"
 workloadsFile="${3:-"$myLoc/../parameters/workloads.txt"}"
 #num is the amount of instances that may be active at the same moment
 num=${4:-1000}
-wargs=${5:-"$myLoc/../parameters/benchmark-arguments.txt"}
+wargs=${5:-"$myLoc/../workloads/benchmark-arguments.txt"}
 isPoisson=${6:-0}
 
 

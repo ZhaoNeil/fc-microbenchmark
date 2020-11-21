@@ -16,6 +16,7 @@ waLoc=""
 mode=${modes[0]}
 num=10
 usePoisson=0
+SYSMON_location="./processing/machine_monitor.py"
 
 which firecracker > /dev/null
 
@@ -41,6 +42,15 @@ help() {
     echo "  -p                      Toggle usage of poisson timings incorporated in workload arugments file." 1>&2
     echo "  -h                      Display this" 1>&2
     exit 1
+}
+
+ensure_pipenv() {
+    which pipenv > /dev/null
+
+    if [[ $? -ne 0 ]]; then
+        echo "Please install pipenv!" 1>&2
+        exit 1
+    fi
 }
 
 #Parse the arguments
@@ -161,8 +171,37 @@ echo "Raising user limits..." 1>&2
 
 if [[ $mode -eq 0 ]]; then
     #benchmark
-    echo "Running benchmark..."
+
+    #We need pipenv
+    ensure_pipenv
+
+    #output to this file, which is sysmon-(workload name)
+    SYSMON_OUTPUT="./results/sysmon-${waLoc##*/}"
+
+    (pipenv run python $SYSMON_location -i 1.0 -o $SYSMON_OUTPUT ) &
+
+    SYSMON_PID=$!
+    waited=0
+
+    #Wait max 3sec for sysmon to pop up
+    while [[ ! -f $SYSMON_OUTPUT ]]; do
+        sleep 1.0
+        waited=$(( ++waited ))
+
+        if [[ $waited -ge 3 ]]; then
+            echo "sysmon took too long to start, exiting..." 1>&2
+            exit 1
+        fi
+    done
+
+    #sleep for 1 sec after, to ensure it has a 0 measurement on the first line
+    sleep 1.0s
+
+    echo "Starting benchmark..." 1>&2
+
     ./scripts/benchmark.sh $kernelLoc $fsLoc $wlLoc $num $waLoc $usePoisson
+
+    kill -2 $SYSMON_PID
 elif [[ $mode -eq 1 ]]; then
     #baseline
     echo "Determining baseline execution times..." 1>&2

@@ -36,18 +36,33 @@ if __name__ == "__main__":
         #Periodicaly write to file, rather then every interval
         line_buffer = []
 
-        f.write(f"#cpu count: {psutil.cpu_count()}")
+        f.write(f"#cpu_count: {psutil.cpu_count()}\n")
+        f.write(f"#total_mem: {psutil.virtual_memory().total}\n")
 
-        f.write("t,pcpu,pmem,load,")
+        #cpu_inter is the sum of waiting for i/o, software and hardware interrupts
+        #mem_avail -> memory available w/o system having to swap
+        #
+
+        f.write("t,cpu_user,cpu_system,cpu_idle,cpu_inter,cpu_percentage,load_1m,mem_avail,swap_used\n")
 
         try:
             while True:
+                #Write to file after x lines added
                 if len(line_buffer) >= write_after:
                     f.writelines(line_buffer)
                     line_buffer = []
 
+                #Measure metrics
+                t = time.time()
+                cpu_times = psutil.cpu_times()
+                cpu_usage = psutil.cpu_percent(interval=None, percpu=False)
+                load_1m = psutil.getloadavg()[0]
+                mem_avail = psutil.virtual_memory().available
+                swap_used = psutil.swap_memory().used
                 
-                line_buffer.append(f"")
+                cpu_inter = cpu_times.irq + cpu_times.softirq + cpu_times.iowait
+
+                line_buffer.append(f"{t},{cpu_times.user},{cpu_times.system},{cpu_times.idle},{cpu_inter},{cpu_usage},{load_1m},{mem_avail},{swap_used}\n")
 
                 time.sleep(cap_interval)
         except KeyboardInterrupt:
