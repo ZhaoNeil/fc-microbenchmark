@@ -1,2 +1,5 @@
-Arrival rate with Poisson process
-Mixed workloads in percentages (e.g. 33,33,33 or 100,0,0 or 10,60,30)
+High priority:
+    - Create script to monitor system utilization
+
+Normal priority:
+    - Reruns

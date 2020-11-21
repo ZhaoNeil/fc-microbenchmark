@@ -3,7 +3,7 @@
 ### Give the user the option to select one workload and open all histograms 
 ### for it. Makes it easier to review all histograms of the same type.
 
-IFS=$'\n'; HISTOGRAMS=( $(find ./results -type f -name "histogram-*") )
+IFS=$'\n'; HISTOGRAMS=( $(find ../results -type f -name "histogram-*") ); unset IFS
 
 UNIQUE_NAMES=()
 #Parallel array for counts
@@ -46,39 +46,18 @@ user_reply=$(( --user_reply ))
 
 echo "Selected: ${UNIQUE_NAMES[$user_reply]}"
 
-IFS=$'\n'; SELECTED_HISTOGRAMS=( $(find ./results -type f -name "${UNIQUE_NAMES[$user_reply]}") )
+IFS=$'\n'; SELECTED_HISTOGRAMS=( $(find ../results -type f -name "${UNIQUE_NAMES[$user_reply]}") ); unset IFS
 
-#Attempt to distribute the dialogs over the screen (not working, doesn't take into account the DE, which takes space)
-IFS=$' '; MY_RES=( $(xrandr --current | grep "current" | awk '{print $8 " " $10}') )
+echo "${SELECTED_HISTOGRAMS[@]}"
 
-RES_X=${MY_RES[0]}
-RES_Y=${MY_RES[1]//,/}
+#Ensure a sort of the histograms (effectively grouping all related ones)
+IFS=$'\n'; SELECTED_HISTOGRAMS=( $(sort <<< "${SELECTED_HISTOGRAMS[@]}")); unset IFS
 
-WIN_NUM=${#SELECTED_HISTOGRAMS[@]}
-# WIN_Y=$(echo "sqrt( ($RES_Y ^ 2) / $WIN_NUM )" | bc)
-# WIN_X=$(echo "($WIN_Y * $RES_X) / $RES_Y" | bc)
-WIN_X=640
-WIN_Y=480
+IMG_NAME="gallery-${UNIQUE_NAMES[$user_reply]}.png"
 
-X=0
-Y=0
+rm -rf $IMG_NAME
 
-for s in ${SELECTED_HISTOGRAMS[@]}; do
-    title="${s//.\/results\//}"
-    # title="${title//\// }"
+#Create a tile and open with feh
+montage ${SELECTED_HISTOGRAMS[@]} -mode Concatenate -tile 3x $IMG_NAME
 
-    geostr="${WIN_X}x${WIN_Y}+${X}+${Y}"
-    
-    kdialog --imgbox $s --title $title --geometry=$geostr &
-
-    X=$(( $X + $WIN_X ))
-    if [[ $X -ge $RES_X ]]; then
-        X=0
-        Y=$(( $Y + $WIN_Y))
-    fi
-done
-
-sleep 0.2s
-read -p "Press enter" forget
-
-killall kdialog
+feh --title "Histogram gallery" $IMG_NAME &
