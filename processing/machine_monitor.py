@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
                 #Measure metrics
                 t = time.time()
-                cpu_times = psutil.cpu_times()
+                cpu_times = psutil.cpu_times_percent(interval=None, percpu=False)
                 cpu_usage = psutil.cpu_percent(interval=None, percpu=False)
                 load_1m = psutil.getloadavg()[0]
                 mem_avail = psutil.virtual_memory().available
