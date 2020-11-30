@@ -8,9 +8,9 @@ All directories with naming scheme xxx with x in {0, ..., 9}:
         Disk 256GB NVMe flash
 
 All directories with naming scheme apolloxxx with x in {0, ... 9}:
-    Linux kernel version: 
-    Distribution:
-    Bash version:
+    Linux kernel version: 5.4.0.53-generic
+    Distribution: Ubuntu 20.04.1
+    Bash version: 5.0.17
     Specs:
         CPU
         RAM
