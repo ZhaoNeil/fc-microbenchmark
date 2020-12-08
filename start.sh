@@ -165,7 +165,7 @@ fi
 
 echo "Raising pid max..." 1>&2
 
-echo "4194303" | sudo tee /proc/sys/kernel/pid_max
+echo "4194303" | sudo tee /proc/sys/kernel/pid_max > /dev/null
 
 echo "Raising user limits..." 1>&2
 
