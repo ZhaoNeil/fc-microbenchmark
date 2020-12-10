@@ -13,7 +13,7 @@ kernelLoc="./resources/vmlinux-${arch}"
 fsLoc="./resources/rootfs.ext4"
 wlLoc="./parameters/workloads.txt"
 waLoc=""
-mode=${modes[0]}
+mode=${modes[2]}
 num=10
 usePoisson=0
 SYSMON_location="./processing/machine_monitor.py"
@@ -165,7 +165,7 @@ fi
 
 echo "Raising pid max..." 1>&2
 
-echo "4194303" | sudo tee /proc/sys/kernel/pid_max
+echo "4194303" | sudo tee /proc/sys/kernel/pid_max > /dev/null
 
 echo "Raising user limits..." 1>&2
 
