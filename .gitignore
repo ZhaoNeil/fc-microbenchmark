@@ -9,3 +9,5 @@ get-pip.py
 predictions*
 histogram*
 processed*
+*.png
+

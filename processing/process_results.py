@@ -399,13 +399,13 @@ def sysmon_graphs(df: pd.DataFrame, title: str = "sysmon output", output: str = 
     #Process the following columns
     process_cols = ["t", "cpu_user", "cpu_system", "cpu_idle", "cpu_inter"]
 
-    for pcol in process_cols:
-        if pcol not in df:
-            continue
+    # for pcol in process_cols:
+    #     if pcol not in df:
+    #         continue
 
-        df[pcol] = df[pcol] - df[pcol][0]
+    #     df[pcol] = df[pcol] - df[pcol][0]
 
-    nrows = len(df.columns) - len(process_cols)
+    nrows = len(df.columns) - len(process_cols) + 1
     ncols = 1
     idx = 1
 
@@ -441,7 +441,7 @@ def sysmon_graphs(df: pd.DataFrame, title: str = "sysmon output", output: str = 
             process_col_one = False
             idx += 1
         else:
-            plt.ylabel("time (s)")
+            plt.ylabel("Percentage %")
             
         list_ax[-1].plot(x_axis, df[col], ",--", label=col)
         list_ax[-1].legend(loc="upper right")
@@ -452,8 +452,9 @@ def sysmon_graphs(df: pd.DataFrame, title: str = "sysmon output", output: str = 
 
 
     plt.suptitle(title)
+    # plt.tight_layout()
     # plt.show()
-    plt.savefig(output, dpi=1000)
+    plt.savefig(output, dpi=100)
     plt.clf()
 
 

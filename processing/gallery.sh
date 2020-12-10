@@ -3,7 +3,7 @@
 ### Give the user the option to select one workload and open all histograms 
 ### for it. Makes it easier to review all histograms of the same type.
 
-IFS=$'\n'; HISTOGRAMS=( $(find ../results -type f -name "histogram-*") ); unset IFS
+IFS=$'\n'; HISTOGRAMS=( $(find ./results -type f -name "histogram-*") ); unset IFS
 
 UNIQUE_NAMES=()
 #Parallel array for counts
@@ -46,7 +46,7 @@ user_reply=$(( --user_reply ))
 
 echo "Selected: ${UNIQUE_NAMES[$user_reply]}"
 
-IFS=$'\n'; SELECTED_HISTOGRAMS=( $(find ../results -type f -name "${UNIQUE_NAMES[$user_reply]}") ); unset IFS
+IFS=$'\n'; SELECTED_HISTOGRAMS=( $(find ./results -type f -name "${UNIQUE_NAMES[$user_reply]}") ); unset IFS
 
 echo "${SELECTED_HISTOGRAMS[@]}"
 
@@ -58,6 +58,6 @@ IMG_NAME="gallery-${UNIQUE_NAMES[$user_reply]}.png"
 rm -rf $IMG_NAME
 
 #Create a tile and open with feh
-montage ${SELECTED_HISTOGRAMS[@]} -mode Concatenate -tile 3x $IMG_NAME
+montage ${SELECTED_HISTOGRAMS[@]} -mode Concatenate -tile 4x $IMG_NAME
 
 feh --title "Histogram gallery" $IMG_NAME &
