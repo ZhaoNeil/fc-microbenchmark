@@ -6,10 +6,36 @@ if [[ $PIPENV_ACTIVE -ne 1 ]]; then
 fi
 
 MY_LOC="$(dirname $0)"
+THREADS=${1:-0}
+PIDS=()
 
 IFS=$'\n'; ALL_DIRS=( $(find $MY_LOC -maxdepth 1 ! -path $MY_LOC -type d) )
 
-for DIR in ${ALL_DIRS[@]}; do
-    echo "Processing $DIR" 1>&2
-    python $MY_LOC/../process_results.py $DIR
-done
+if [[ $THREADS -gt 0 ]]; then
+    echo "Threaded processing turned on." 1>&2
+    for DIR in ${ALL_DIRS[@]}; do
+        echo "Processing $DIR" 1>&2
+
+        while [[ ${#PIDS[@]} -ge $THREADS ]]; do
+            wait ${PIDS[@]}
+            PIDS=()
+        done
+
+        python $MY_LOC/../processing/process_results.py $DIR &
+        PIDS+=($!)
+
+    done
+
+    if [[ ${#PIDS[@]} -gt 0 ]]; then
+        wait ${PIDS[@]}
+    fi
+else
+
+    for DIR in ${ALL_DIRS[@]}; do
+        echo "Processing $DIR" 1>&2
+
+        python $MY_LOC/../processing/process_results.py $DIR
+        
+    done
+
+fi

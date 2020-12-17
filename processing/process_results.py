@@ -27,7 +27,9 @@ At least a file with baselines must be present, as well as one results set.
 
 """
 
-WORKLOAD_DIR   = "./workloads"
+MY_LOCATION = path.dirname(path.abspath(__file__))
+
+WORKLOAD_DIR = path.abspath(path.join(MY_LOCATION, "../workloads"))
 RESULTS_PREFIX = "results-"
 RESULTS_EXT = ".txt"
 SYSMON_RESULTS_PREFIX = "sysmon-"
@@ -454,7 +456,7 @@ def sysmon_graphs(df: pd.DataFrame, title: str = "sysmon output", output: str = 
     plt.suptitle(title)
     # plt.tight_layout()
     # plt.show()
-    plt.savefig(output, dpi=100)
+    plt.savefig(output, dpi=1000)
     plt.clf()
 
 
@@ -557,7 +559,7 @@ def process_data(directory: str) -> None:
                     prefix_start = 0
                 
                 #Transform path to a nice readable title
-                histo_title = d[prefix_start+len("results"):].replace("/", " ")
+                histo_title = d[prefix_start+len("results"):].replace("/", " ") + f[len(RESULTS_PREFIX):]
                 histo_name = HISTO_PREFIX + path.splitext(f)[0] + HISTO_EXT
                 # Save the bins to avoid extra work in case of rerender of histo?
                 _, _ = concurrency_histogram(df=proc_df, df_pred=preds, output=path.join(d, histo_name), title=histo_title, bin_size=bin_size)
@@ -579,8 +581,12 @@ def process_data(directory: str) -> None:
 
                 sysmon_df = read_csv(path.join(d, f))
 
+                prefix_start = d.find("results")
+                if prefix_start < 0:
+                    prefix_start = 0
+
                 graph_output = path.join(d, path.splitext(f)[0] + ".png")
-                graph_title = "System usage " + f[len(SYSMON_RESULTS_PREFIX):]
+                graph_title = d[prefix_start+len("results"):].replace("/", " ") + f[len(SYSMON_RESULTS_PREFIX):]
 
                 sysmon_graphs(sysmon_df, title=graph_title, output=graph_output, total_mem=total_mem)
 

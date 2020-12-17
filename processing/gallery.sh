@@ -3,6 +3,8 @@
 ### Give the user the option to select one workload and open all histograms 
 ### for it. Makes it easier to review all histograms of the same type.
 
+OLDIFS=$IFS
+
 IFS=$'\n'; HISTOGRAMS=( $(find ./results -type f -name "histogram-*") ); unset IFS
 
 UNIQUE_NAMES=()
@@ -48,16 +50,37 @@ echo "Selected: ${UNIQUE_NAMES[$user_reply]}"
 
 IFS=$'\n'; SELECTED_HISTOGRAMS=( $(find ./results -type f -name "${UNIQUE_NAMES[$user_reply]}") ); unset IFS
 
-echo "${SELECTED_HISTOGRAMS[@]}"
+# echo "${SELECTED_HISTOGRAMS[@]}"
 
 #Ensure a sort of the histograms (effectively grouping all related ones)
 IFS=$'\n'; SELECTED_HISTOGRAMS=( $(sort <<< "${SELECTED_HISTOGRAMS[@]}")); unset IFS
 
-IMG_NAME="gallery-${UNIQUE_NAMES[$user_reply]}.png"
+VIEWBOX=()
+TAILBOX=()
+
+IFS=$OLDIFS
+for hist in ${SELECTED_HISTOGRAMS[@]}; do 
+    histdir="$(dirname $hist)"
+    sysmonname="$(basename $hist)"
+    sysmonname="sysmon-${sysmonname##histogram-results-}"
+
+    echo $sysmonname
+
+    if [[ -e "$histdir/$sysmonname" ]]; then
+        echo "Found sysmon graph for $hist"
+        VIEWBOX+=( $hist "$histdir/$sysmonname" )
+    else
+        echo "$hist does not have a sysmon graph, adding to tail of list later"
+        TAILBOX+=( $hist )
+    fi
+
+done
+
+IMG_NAME="gallery-${UNIQUE_NAMES[$user_reply]}"
 
 rm -rf $IMG_NAME
 
 #Create a tile and open with feh
-montage ${SELECTED_HISTOGRAMS[@]} -mode Concatenate -tile 4x $IMG_NAME
+montage ${VIEWBOX[@]} ${TAILBOX[@]} -mode Concatenate -tile 2x -limit memory 3GiB -limit map 3GiB $IMG_NAME
 
 feh --title "Histogram gallery" $IMG_NAME &
