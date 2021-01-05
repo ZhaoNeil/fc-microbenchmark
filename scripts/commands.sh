@@ -21,6 +21,20 @@ curl_put() {
     fi
 }
 
+check_file_exists() {
+  local FILENAME="$1"
+
+  [ -e "$FILENAME" ] && return 0 || return 1
+}
+
+exit_with_message() {
+  local MSG="$1"
+  local ERR=${2:-0}
+
+  echo $MSG 1>&2
+  exit $ERR
+}
+
 issue_commands() {
     local KERNEL_ARGS VERBOSE
     VERBOSE=${1:-"?"}
@@ -60,6 +74,8 @@ curl_put '/drives/1' <<EOF
 }
 EOF
 
+if [[ -e "$writefsLocation" ]]; then
+
 curl_put '/drives/2' <<EOF
 {
   "drive_id": "2",
@@ -70,11 +86,13 @@ curl_put '/drives/2' <<EOF
 }
 EOF
 
+fi
+
 curl_put '/actions' <<EOF
 {
   "action_type": "InstanceStart"
 }
 EOF
 
-    return 0;
+    return 0
 }

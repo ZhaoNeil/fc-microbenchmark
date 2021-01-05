@@ -23,6 +23,11 @@ TIMEFORMAT="%3R"
 #Import issue_commands
 source $myLocation/commands.sh
 
+check_file_exists $kernelLocation || exit_with_message "Cannot locate the kernel!" 1
+check_file_exists $fsLocation ||exit_with_message "Cannot locate the filesystem!" 1
+
+check_file_exists $writefsLocation || echo "Cannot locate the writedisk, some functions may not work!" 1>&2
+
 #For debugging purposes
 asDeamon=0
 verbose=0
