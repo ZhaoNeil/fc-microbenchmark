@@ -173,12 +173,12 @@ if [[ $mode -eq 0 ]]; then
     #benchmark
 
     #We need pipenv
-    ensure_pipenv
+    #ensure_pipenv
 
     #output to this file, which is sysmon-(workload name)
     SYSMON_OUTPUT="./results/sysmon-${waLoc##*/}"
 
-    (pipenv run python $SYSMON_location -i 1.0 -o $SYSMON_OUTPUT ) &
+    (python3.7 $SYSMON_location -i 1.0 -o $SYSMON_OUTPUT ) &
 
     SYSMON_PID=$!
     waited=0

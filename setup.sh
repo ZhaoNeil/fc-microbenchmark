@@ -91,7 +91,7 @@ fi
 echo "Checking if write disk exists..."
 
 if [[ ! -e "$resourceDir/$writefsName" ]]; then
-    dd if=/dev/zero of="$resourceDir/$writefsName" bs=1G count=10
+    dd if=/dev/zero of="$resourceDir/$writefsName" bs=1G count=5
     mkfs.ext4 "$resourceDir/$writefsName"
 fi
 
