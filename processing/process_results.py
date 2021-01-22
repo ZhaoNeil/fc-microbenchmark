@@ -30,6 +30,7 @@ At least a file with baselines must be present, as well as one results set.
 MY_LOCATION = path.dirname(path.abspath(__file__))
 
 WORKLOAD_DIR = path.abspath(path.join(MY_LOCATION, "../workloads"))
+PREDICTION_PREFIX = "predictions-"
 RESULTS_PREFIX = "results-"
 RESULTS_EXT = ".txt"
 SYSMON_RESULTS_PREFIX = "sysmon-"
@@ -174,13 +175,13 @@ def predict_workload_runtime(filepath: str, baselines: dict, write_dir: str = ""
     workload[COLUMN_END] = workload[COLUMN_PREDICT_END]
 
     if write_dir:
-        output_name = path.join(write_dir, "predictions-" + path.basename(filepath))
+        output_name = path.join(write_dir, PREDICTION_PREFIX + path.basename(filepath))
 
         with open(output_name, "w") as f:
-            f.write("Workload: {} \n".format(path.basename(filepath)))
-            f.write("\tPredicted runtime = {} \n".format(workload[COLUMN_PREDICT_END].max()))
-            f.write("\t{}th instance determines runtime \n".format(workload[COLUMN_PREDICT_END].idxmax()))
-            f.write("\t{} is maximal amount of concurrent events \n".format(max_concurrent_events(workload)))
+            f.write("# Workload\t{} \n".format(path.basename(filepath)))
+            f.write("# Predicted runtime\t{} \n".format(workload[COLUMN_PREDICT_END].max()))
+            f.write("# Instance determining runtime\t{} \n".format(workload[COLUMN_PREDICT_END].idxmax()))
+            f.write("# Maximal concurrency\t{} \n".format(max_concurrent_events(workload)))
         
         workload.to_csv(output_name, mode="a", index=False)
 
@@ -376,6 +377,7 @@ def process_file(filename: str, baselines: dict, output=True) -> pd.DataFrame:
         to_write = []
 
         to_write.append(("Total time", result_df[COLUMN_END].max()))
+        to_write.append(("Delta runtime", ))
         to_write.append(("No. instances", len(result_df)))
         to_write.append(("Max. concurrent events", max_concurrent_events(result_df)))
         to_write.append(("Sum of delta tFC", result_df[COLUMN_DELTA_FC].sum()))
@@ -563,6 +565,7 @@ def process_data(directory: str) -> None:
                 histo_name = HISTO_PREFIX + path.splitext(f)[0] + HISTO_EXT
                 # Save the bins to avoid extra work in case of rerender of histo?
                 _, _ = concurrency_histogram(df=proc_df, df_pred=preds, output=path.join(d, histo_name), title=histo_title, bin_size=bin_size)
+
             elif f.startswith(SYSMON_RESULTS_PREFIX) and f.endswith(SYSMON_EXT):
                 #Create some graphs of the sysmon results and store these 
                 #as a file as well

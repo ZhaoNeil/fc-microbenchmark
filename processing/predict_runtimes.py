@@ -6,6 +6,8 @@
     Predict runtimes for each benchmark workload.
     For this, only the baselines are needed, preferably as much as possible 
     (to even out small variety in machines)
+
+    The functions in this script were merged to process_results.py
 """
 
 from os import path, listdir
