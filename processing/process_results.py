@@ -51,6 +51,8 @@ COLUMN_PREDICT_END = "pred. end time"
 COLUMN_DELTA_FC = "d tFC"
 COLUMN_DELTA_VM = "d tVM"
 
+plt.xlim(xmin=0.0)
+
 def recursive_file_search(directory: str, list_filter = None) -> list:
     """
         Finds all files in a directory and its subdirectories.
@@ -377,7 +379,8 @@ def process_file(filename: str, baselines: dict, output=True) -> pd.DataFrame:
         to_write = []
 
         to_write.append(("Total time", result_df[COLUMN_END].max()))
-        to_write.append(("Delta runtime", ))
+        #TODO: calculate delta runtime using the prediction
+        # to_write.append(("Delta runtime", 0))
         to_write.append(("No. instances", len(result_df)))
         to_write.append(("Max. concurrent events", max_concurrent_events(result_df)))
         to_write.append(("Sum of delta tFC", result_df[COLUMN_DELTA_FC].sum()))
@@ -429,7 +432,7 @@ def sysmon_graphs(df: pd.DataFrame, title: str = "sysmon output", output: str = 
     process_col_one = True
 
     #Do not need the 't' column to be in df
-    x_axis = df.t
+    x_axis = df.t - df.t.min()
     df = df.drop(df.t.name, axis=1)
     list_ax = []
     subplot_args = {}
