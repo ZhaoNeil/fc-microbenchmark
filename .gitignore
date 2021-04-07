@@ -10,4 +10,5 @@ predictions*
 histogram*
 processed*
 *.png
-
+results-backup
+*.ipynb_checkpoints*
