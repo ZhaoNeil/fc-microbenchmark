@@ -16,7 +16,7 @@ fsLoc="${2:-"$myLoc/../resources/rootfs.ext4"}"
 workloadsFile="${3:-"$myLoc/../parameters/workloads.txt"}"
 #Number of times each workload must be run
 num=${4:-10}
-wargs=${5:-"$myLoc/../baseline-arguments.txt"}
+wargs=${5:-"$myLoc/../parameters/baseline-arguments.txt"}
 
 if [[ "$wargs" == "" ]]; then
     echo "Please specify workload arguments." 1>&2
