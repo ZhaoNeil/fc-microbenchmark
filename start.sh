@@ -12,8 +12,8 @@ arch="$(uname -m)"
 kernelLoc="./resources/vmlinux-${arch}"
 fsLoc="./resources/rootfs.ext4"
 wlLoc="./parameters/workloads.txt"
-waLoc=""
-mode=${modes[1]}
+waLoc="./workloads/benchmark-arguments.txt"
+mode=${modes[0]}
 num=10
 usePoisson=0
 SYSMON_location="./processing/machine_monitor.py"
@@ -178,7 +178,7 @@ if [[ $mode -eq 0 ]]; then
     #output to this file, which is sysmon-(workload name)
     SYSMON_OUTPUT="./results/sysmon-${waLoc##*/}"
 
-    (python3.7 $SYSMON_location -i 1.0 -o $SYSMON_OUTPUT ) &
+    (python3 $SYSMON_location -i 1.0 -o $SYSMON_OUTPUT ) &
 
     SYSMON_PID=$!
     waited=0

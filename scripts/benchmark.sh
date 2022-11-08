@@ -8,7 +8,7 @@ fsLoc="${2:-"$myLoc/../resources/rootfs.ext4"}"
 workloadsFile="${3:-"$myLoc/../parameters/workloads.txt"}"
 #num is the amount of instances that may be active at the same moment
 num=${4:-1000}
-wargs=${5:-"$myLoc/../workloads/benchmark-arguments.txt"}
+wargs="${5:-"$myLoc/../workloads/benchmark-argument.txt"}"
 isPoisson=${6:-0}
 
 
@@ -83,7 +83,7 @@ IFS=$'\n'; results=( $(cat $fileResults) )
 
 #We should get x results, with x being equal to the amount of lines in the
 #$wargs file
-if [[ ${#results[@]} -ne ${#workloadargs[@]} ]]; then
+if [[ $[${#results[@]}-1] -ne ${#workloadargs[@]} ]]; then
     echo "Something went wrong with saving the results:" 1>&2
     echo "  Expected ${#workloadargs[@]} results, but got ${#results[@]}" 1>&2
 fi
